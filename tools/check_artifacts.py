@@ -64,6 +64,8 @@ def check_boot_img(path: Path) -> None:
         fail(f"header_version is {header_version}; this board needs v0 or the ABL ignores the payload")
     if page_size != PAGE:
         fail(f"page size {page_size} is not {PAGE}")
+    if kernel_addr != 0x8000:
+        fail(f"kernel_addr is {kernel_addr:#x}; the tested images use base 0 + kernel_offset 0x8000")
 
     start = page_size
     kernel = data[start:start + kernel_size]

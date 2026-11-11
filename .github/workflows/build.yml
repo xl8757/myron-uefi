@@ -26,6 +26,7 @@ on:
       - 'Resources/**'
       - 'BootShim/**'
       - 'apply_screen_log.py'
+      - 'tools/**'
       - 'validate_memory_map.py'
       - 'fetch_vendor_inputs.py'
       - '.github/workflows/build.yml'
@@ -93,6 +94,11 @@ jobs:
           cp -r unixnu/package/UniXNUPkg Mu-Silicium/Platforms/Xiaomi/UniXNUPkg
           cp -r darwinboot/DarwinBootPkg Mu-Silicium/Platforms/Xiaomi/DarwinBootPkg
           ls Mu-Silicium/Platforms/Xiaomi
+
+      # build_uefi.py 只转发它自己 argument_map 里的键，页大小没法从 toml 传，
+      # 所以直接在固定的 mkbootimg.py 上改默认值（与已知可启动的配方一致）。
+      - name: pin boot image geometry
+        run: python3 tools/patch_mkbootimg.py --mu-root Mu-Silicium
 
       - name: overlay myronPkg and BootShim
         run: |
