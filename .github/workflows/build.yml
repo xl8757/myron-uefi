@@ -130,21 +130,37 @@ jobs:
           fi
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           echo "=== 产物 ==="
-          find Build/myronPkg -maxdepth 4 -type f \( -name '*.fd' -o -name '*.img' \) -exec ls -l {} \;
+          # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
+          ls -l Mu-myron*.img BootShim/BootShim.bin 2>/dev/null || true
           fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           size=$(stat -c %s "$fd")
           echo "FD size = $size"
           # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。
           test "$size" -eq $((0x300000)) || { echo "FD 不是 0x300000 字节"; exit 1; }
           sha256sum "$fd"
-          for img in Build/myronPkg/*/FV/*.img; do [ -f "$img" ] && sha256sum "$img"; done || true
+          # shim 必须比 Mu 原版 192 字节大：多出来的是 DAIF 屏蔽和 cache 同步。
+          shim=$(stat -c %s BootShim/BootShim.bin)
+          echo "BootShim size = $shim"
+          test "$shim" -gt 192 || { echo "shim 没有带上本次改动"; exit 1; }
+          img=$(ls Mu-myron*.img | head -1)
+          test -f "$img" || { echo "没有生成 boot.img"; exit 1; }
+          sha256sum "$img"
+          python3 -c "
+          import struct, sys
+          data = open(sys.argv[1], 'rb').read()
+          assert data[:8] == b'ANDROID!', 'not an Android boot image'
+          ver = struct.unpack_from('<I', data, 1640)[0]
+          print('boot.img', len(data), 'bytes, header_version =', ver)
+          " "$img"
+          cp "$img" BootShim/../myron-boot.img
 
       - uses: actions/upload-artifact@v4
         with:
           name: uefi-myron
           path: |
             Mu-Silicium/Build/**/FV/*.fd
-            Mu-Silicium/Build/**/FV/*.img
+            Mu-Silicium/BootShim/BootShim.bin
+            Mu-Silicium/myron-boot.img
           if-no-files-found: error
           retention-days: 14
 
@@ -162,7 +178,8 @@ jobs:
             "$mode" "${{ inputs.build_type || 'DEBUG' }}" "${{ inputs.skip }}" \
             "$(sha256sum "$fd" | cut -d' ' -f1)" "${GITHUB_SHA}" "$MU_COMMIT")
           assets=("$fd")
-          for img in Mu-Silicium/Build/myronPkg/*/FV/*.img; do [ -f "$img" ] && assets+=("$img"); done
+          [ -f Mu-Silicium/myron-boot.img ] && assets+=("Mu-Silicium/myron-boot.img")
+          [ -f Mu-Silicium/BootShim/BootShim.bin ] && assets+=("Mu-Silicium/BootShim/BootShim.bin")
           ls -l "${assets[@]}"
           gh release create "$tag" --title "$tag" --notes "$notes" "${assets[@]}"
           echo "TAG=$tag" >> "$GITHUB_ENV"
