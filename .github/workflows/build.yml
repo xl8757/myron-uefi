@@ -55,23 +55,25 @@ jobs:
       - name: validate myron memory map
         run: python3 validate_memory_map.py
 
-      # GitHub runner 默认把 apt 指到 azure.archive.ubuntu.com，最近这台机器上
-      # 整段不可达：日志里全是 Ign:，每次重试空等 20 秒，最后超时退出 124。
-      # 直接换回官方源。ubuntu-24.04 已经自带 git/build-essential/clang/lld/llvm，
-      # 这里只补真正缺的。
+      # runner 的 DNS 会间歇失效（日志里 "Temporary failure resolving"），
+      # 所以先走默认源，失败再换官方源重来一次；真正缺了哪个工具最后统一报。
       - name: deps
         run: |
-          sudo rm -f /etc/apt/sources.list.d/*
-          printf '%s\n' \
-            'deb http://archive.ubuntu.com/ubuntu noble main universe' \
-            'deb http://archive.ubuntu.com/ubuntu noble-updates main universe' \
-            'deb http://security.ubuntu.com/ubuntu noble-security main universe' \
-            | sudo tee /etc/apt/sources.list >/dev/null
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=15 update
-          sudo apt-get install -y --no-install-recommends \
-            uuid-dev nasm acpica-tools python3-venv python3-pip \
-            gcc-aarch64-linux-gnu libfuse3-dev
-          command -v nasm iasl aarch64-linux-gnu-gcc clang
+          PKGS="uuid-dev nasm acpica-tools python3-venv python3-pip gcc-aarch64-linux-gnu libfuse3-dev"
+          fetch() {
+            sudo apt-get -o Acquire::Retries=4 -o Acquire::http::Timeout=20 update -qq || true
+            sudo apt-get install -y --no-install-recommends $PKGS
+          }
+          fetch || {
+            echo "== 默认源失败，换官方源重试 =="
+            sudo rm -f /etc/apt/sources.list.d/*
+            printf '%s\n' \
+              'deb http://archive.ubuntu.com/ubuntu noble main universe' \
+              'deb http://archive.ubuntu.com/ubuntu noble-updates main universe' \
+              | sudo tee /etc/apt/sources.list >/dev/null
+            fetch
+          }
+          command -v nasm iasl aarch64-linux-gnu-gcc clang python3
 
       - name: clone Mu-Silicium (pinned)
         run: |
