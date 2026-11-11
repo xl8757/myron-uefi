@@ -55,10 +55,17 @@ jobs:
       - name: validate myron memory map
         run: python3 validate_memory_map.py
 
+      # ubuntu-24.04 的镜像里 clang/lld/llvm/git/build-essential 都已经装好，
+      # 这里只补真正缺的。apt 偶发挂死在 update 上（一次跑了 25 分钟），所以
+      # 每一步都加超时和重试，update 失败也不阻断 —— 索引过期顶多装不上新包。
       - name: deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git build-essential uuid-dev nasm acpica-tools python3 python3-venv python3-pip clang lld llvm gcc-aarch64-linux-gnu libfuse3-dev
+          APT="-o Acquire::Retries=5 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
+          timeout 240 sudo apt-get $APT update || echo "apt update 超时，继续"
+          timeout 420 sudo apt-get $APT install -y --no-install-recommends \
+            uuid-dev nasm acpica-tools python3-venv python3-pip \
+            gcc-aarch64-linux-gnu libfuse3-dev
+          command -v nasm iasl gcc-aarch64-linux-gnu-gcc clang
 
       - name: clone Mu-Silicium (pinned)
         run: |
