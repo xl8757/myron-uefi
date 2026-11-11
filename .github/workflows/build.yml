@@ -55,25 +55,22 @@ jobs:
       - name: validate myron memory map
         run: python3 validate_memory_map.py
 
-      # runner 的 DNS 会间歇失效（日志里 "Temporary failure resolving"），
-      # 所以先走默认源，失败再换官方源重来一次；真正缺了哪个工具最后统一报。
+      # apt 在这批 runner 上不可靠：DNS 时不时整段失效（"Temporary failure
+      # resolving"），带重试的话能空耗二十分钟。ubuntu-24.04 镜像本来就带了
+      # nasm/clang/lld/python，所以这里只限时试装一次，然后无条件打印工具
+      # 清单——真缺什么，构建会立刻报出来，比在 apt 上空等强。
       - name: deps
         run: |
-          PKGS="uuid-dev nasm acpica-tools python3-venv python3-pip gcc-aarch64-linux-gnu libfuse3-dev"
-          fetch() {
-            sudo apt-get -o Acquire::Retries=4 -o Acquire::http::Timeout=20 update -qq || true
-            sudo apt-get install -y --no-install-recommends $PKGS
-          }
-          fetch || {
-            echo "== 默认源失败，换官方源重试 =="
-            sudo rm -f /etc/apt/sources.list.d/*
-            printf '%s\n' \
-              'deb http://archive.ubuntu.com/ubuntu noble main universe' \
-              'deb http://archive.ubuntu.com/ubuntu noble-updates main universe' \
-              | sudo tee /etc/apt/sources.list >/dev/null
-            fetch
-          }
-          command -v nasm iasl aarch64-linux-gnu-gcc clang python3
+          APT="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=8 -o Acquire::Retries=1"
+          timeout 150 sudo apt-get $APT update -qq || echo "== apt update 失败，继续 =="
+          timeout 180 sudo apt-get $APT install -y --no-install-recommends \
+              uuid-dev nasm acpica-tools python3-venv python3-pip \
+              gcc-aarch64-linux-gnu libfuse3-dev || echo "== apt install 失败，继续 =="
+          echo "== 工具清单 =="
+          for t in nasm iasl aarch64-linux-gnu-gcc clang ld.lld python3; do
+            printf '%-24s ' "$t"; command -v "$t" || echo MISSING
+          done
+          ls -l /usr/include/uuid/uuid.h /usr/include/fuse3/fuse.h 2>/dev/null || true
 
       - name: clone Mu-Silicium (pinned)
         run: |
