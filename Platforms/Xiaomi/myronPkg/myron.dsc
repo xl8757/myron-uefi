@@ -85,8 +85,21 @@
   #
   ConfigurationMapLib|myronPkg/Library/ConfigurationMapLib/ConfigurationMapLib.inf
 
+  #
+  # UniXNU
+  #
+  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
+
 [Components]
   #
   # ACPI Tables
   #
   aston/AcpiTables.inf
+
+  #
+  # Boot manager and the XNU loader
+  #
+  UniXNUPkg/Application/UniXNU/UniXNU.inf
+  UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
+  DarwinBootPkg/Driver/DarwinBoot.inf
