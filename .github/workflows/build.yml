@@ -1,6 +1,25 @@
 name: build-uefi
 on:
   workflow_dispatch:
+    inputs:
+      display:
+        description: "显示驱动：custom=厂商 DisplayDxe（会初始化 MDSS）；simple=SimpleFbDxe（只用 ABL 留下的 framebuffer）"
+        type: choice
+        options: [custom, simple]
+        default: custom
+      skip:
+        description: "额外从 DXE.inc 里剔除的模块名（空格分隔，例如 DisplayDxe CPRDxe）"
+        type: string
+        default: ""
+      label:
+        description: "实验标签，会进 release 名，便于区分版本"
+        type: string
+        default: ""
+      build_type:
+        description: "构建类型"
+        type: choice
+        options: [DEBUG, RELEASE]
+        default: DEBUG
   push:
     paths:
       - 'Platforms/**'
@@ -75,12 +94,23 @@ jobs:
           ls Mu-Silicium/Platforms/Xiaomi/myronPkg
           sha256sum Mu-Silicium/Resources/DTBs/myron.dtb
 
+      # 实验开关：不改仓库、只改构建产物，用于定位复位点。
+      - name: apply experiment knobs
+        env:
+          DISPLAY_MODE: ${{ inputs.display || 'custom' }}
+          SKIP_MODULES: ${{ inputs.skip || '' }}
+        run: |
+          python3 tools/experiment.py \
+            --pkg Mu-Silicium/Platforms/Xiaomi/myronPkg \
+            --display "$DISPLAY_MODE" \
+            --skip $SKIP_MODULES
+
       - name: build uefi
         run: |
           cd Mu-Silicium
           source ../venv/bin/activate
-          python3 build_uefi.py -d myron -r DEBUG
-          fd=Build/myronPkg/DEBUG_CLANGPDB/FV/SILICIUM_UEFI.fd
+          python3 build_uefi.py -d myron -r ${{ inputs.build_type || 'DEBUG' }}
+          fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           stat -c %s "$fd" || true
           sha256sum "$fd"
 
@@ -95,14 +125,18 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # 固件卷挂到公开 release：不用登录、不用 token 就能下载，
-      # 本机直接下下来打 boot.img。
+      # 固件卷挂到公开 release：不用登录、不用 token 就能下载，本机直接下下来打 boot.img。
       - name: publish firmware volume
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="fd-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}"
-          gh release create "$tag" --title "$tag" \
-            --notes "auto build of ${GITHUB_SHA}" \
-            Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd
+          label="${{ inputs.label }}"
+          mode="${{ inputs.display || 'custom' }}"
+          tag="fd-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}${label:+-$label}"
+          fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
+          notes=$(printf 'display=%s\nbuild=%s\nskip=%s\nsha256=%s\nsource=%s' \
+            "$mode" "${{ inputs.build_type || 'DEBUG' }}" "${{ inputs.skip }}" \
+            "$(sha256sum "$fd" | cut -d' ' -f1)" "${GITHUB_SHA}")
+          gh release create "$tag" --title "$tag" --notes "$notes" "$fd"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
