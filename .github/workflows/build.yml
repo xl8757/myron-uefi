@@ -55,17 +55,23 @@ jobs:
       - name: validate myron memory map
         run: python3 validate_memory_map.py
 
-      # ubuntu-24.04 的镜像里 clang/lld/llvm/git/build-essential 都已经装好，
-      # 这里只补真正缺的。apt 偶发挂死在 update 上（一次跑了 25 分钟），所以
-      # 每一步都加超时和重试，update 失败也不阻断 —— 索引过期顶多装不上新包。
+      # GitHub runner 默认把 apt 指到 azure.archive.ubuntu.com，最近这台机器上
+      # 整段不可达：日志里全是 Ign:，每次重试空等 20 秒，最后超时退出 124。
+      # 直接换回官方源。ubuntu-24.04 已经自带 git/build-essential/clang/lld/llvm，
+      # 这里只补真正缺的。
       - name: deps
         run: |
-          APT="-o Acquire::Retries=5 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
-          timeout 240 sudo apt-get $APT update || echo "apt update 超时，继续"
-          timeout 420 sudo apt-get $APT install -y --no-install-recommends \
+          sudo rm -f /etc/apt/sources.list.d/*
+          printf '%s\n' \
+            'deb http://archive.ubuntu.com/ubuntu noble main universe' \
+            'deb http://archive.ubuntu.com/ubuntu noble-updates main universe' \
+            'deb http://security.ubuntu.com/ubuntu noble-security main universe' \
+            | sudo tee /etc/apt/sources.list >/dev/null
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=15 update
+          sudo apt-get install -y --no-install-recommends \
             uuid-dev nasm acpica-tools python3-venv python3-pip \
             gcc-aarch64-linux-gnu libfuse3-dev
-          command -v nasm iasl gcc-aarch64-linux-gnu-gcc clang
+          command -v nasm iasl aarch64-linux-gnu-gcc clang
 
       - name: clone Mu-Silicium (pinned)
         run: |
