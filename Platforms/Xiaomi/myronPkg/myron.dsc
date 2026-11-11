@@ -90,6 +90,17 @@
 !endif
 
   #
+  # The screen is the only output channel on this board, and it holds about
+  # fifty lines. The DXE core's pool/page tracing alone fills a whole page
+  # before the first driver starts, which pushes the interesting part off the
+  # top. Keep errors, warnings, the driver load lines and DEBUG(): that is
+  # 0x80000000 | 0x40 | 0x04 | 0x02, and drop the allocation noise.
+  #
+!if $(TARGET) == DEBUG
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80000046
+!endif
+
+  #
   # Platform PEI
   #
   gQcomPkgTokenSpaceGuid.PcdPlatformType|"LA"
