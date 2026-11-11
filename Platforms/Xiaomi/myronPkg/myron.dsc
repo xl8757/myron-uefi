@@ -80,6 +80,16 @@
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|32
 
   #
+  # Debug. SiliciumPkg sets 0x2F for DEBUG, where 0x20 is
+  # DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED: a stock vendor driver that returns
+  # EFI_NOT_FOUND halts the whole boot with no way back but a power cycle. Keep
+  # asserts and print output, drop the deadloop so the dispatcher continues.
+  #
+!if $(TARGET) == DEBUG
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x0F
+!endif
+
+  #
   # Platform PEI
   #
   gQcomPkgTokenSpaceGuid.PcdPlatformType|"LA"
