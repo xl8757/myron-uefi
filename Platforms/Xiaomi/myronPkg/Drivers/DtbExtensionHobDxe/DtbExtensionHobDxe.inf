@@ -33,3 +33,10 @@
 
 [Guids]
   gEfiDtbExtensionHobGuid
+
+#
+# Nothing to wait for: the entry argument HOB comes from SEC, and the APRIORI
+# list already places this driver ahead of the vendor stack.
+#
+[Depex]
+  TRUE
