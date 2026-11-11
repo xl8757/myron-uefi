@@ -11,6 +11,11 @@ on:
         description: "额外从 DXE.inc/APRIORI.inc 里剔除的模块名（空格分隔）"
         type: string
         default: ""
+      vendor:
+        description: "厂商 DXE 层：full=带上原厂那套（默认）；none=只留 Mu 自己的驱动，用来测 BDS/UniXNU 是否依赖它"
+        type: choice
+        options: [full, none]
+        default: full
       label:
         description: "实验标签，会进 release 名，便于区分版本"
         type: string
@@ -152,10 +157,12 @@ jobs:
         env:
           DISPLAY_MODE: ${{ inputs.display || 'simple' }}
           SKIP_MODULES: ${{ inputs.skip || '' }}
+          VENDOR_MODE: ${{ inputs.vendor || 'full' }}
         run: |
           python3 tools/experiment.py \
             --pkg Mu-Silicium/Platforms/Xiaomi/myronPkg \
             --display "$DISPLAY_MODE" \
+            --vendor "$VENDOR_MODE" \
             --skip $SKIP_MODULES
 
       - name: build uefi

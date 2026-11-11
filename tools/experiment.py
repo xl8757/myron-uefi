@@ -64,11 +64,39 @@ def skip_modules(pkg: Path, names) -> None:
         sys.exit("指定的模块一个都没匹配到，检查名字")
 
 
+def drop_vendor(pkg: Path) -> None:
+    """把 Binaries/ 下的厂商模块全部注释掉，只留 Mu 自己编的驱动。
+
+    厂商那套 DXE 是原厂 UEFI 的一部分，它们靠设备树/平台配置找自己的区域。
+    内存启动时那套配置可能根本不存在，于是一个驱动接一个驱动地断言。摘掉整层
+    可以直接回答「BDS / UniXNU 到底需不需要它们」。
+    """
+    total = 0
+    for inc in ("DXE.inc", "APRIORI.inc"):
+        p = pkg / "Include" / inc
+        if not p.is_file():
+            continue
+        out = []
+        for line in p.read_text(encoding="utf-8").splitlines(True):
+            s = line.strip()
+            if s.startswith("#") or not s.startswith("INF "):
+                out.append(line)
+                continue
+            if "Binaries/" in s:
+                out.append("  #NOVENDOR " + s + "\n")
+                total += 1
+                continue
+            out.append(line)
+        p.write_text("".join(out), encoding="utf-8")
+    print("vendor = none（共注释 %d 个厂商模块）" % total)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pkg", type=Path, required=True)
     ap.add_argument("--display", choices=("custom", "simple"), default="custom")
     ap.add_argument("--skip", nargs="*", default=[])
+    ap.add_argument("--vendor", choices=("full", "none"), default="full")
     a = ap.parse_args()
 
     if not (a.pkg / "myron.dsc").is_file():
@@ -76,6 +104,8 @@ def main() -> int:
 
     set_display(a.pkg, a.display)
     skip_modules(a.pkg, a.skip)
+    if a.vendor == "none":
+        drop_vendor(a.pkg)
 
     print("\n--- 当前生效的显示相关行 ---")
     for line in (a.pkg / "myron.dsc").read_text(encoding="utf-8").splitlines():
