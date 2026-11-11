@@ -6,7 +6,11 @@ on:
       - 'Platforms/**'
       - 'Resources/**'
       - 'validate_memory_map.py'
+      - 'fetch_vendor_inputs.py'
       - '.github/workflows/build.yml'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -34,6 +38,22 @@ jobs:
           git clone --recursive --depth 1 https://github.com/Project-Silicium/Mu-Silicium.git
           echo "mu at $(git -C Mu-Silicium rev-parse --short HEAD)"
 
+      - name: venv and nasm shim
+        run: |
+          D=Mu-Silicium/Mu_Basecore/BaseTools/Bin/mu_nasm_extdep
+          mkdir -p $D/Linux-x86-64
+          echo 'version: 20016.1.1' > $D/extdep_state.yaml
+          ln -sf /usr/bin/nasm /usr/bin/ndisasm $D/Linux-x86-64/ 2>/dev/null || true
+          python3 -m venv venv
+          venv/bin/pip install -r Mu-Silicium/pip-requirements.txt
+          venv/bin/pip install uefi_firmware
+
+      - name: vendor inputs
+        run: |
+          source venv/bin/activate
+          python fetch_vendor_inputs.py --mu-root Mu-Silicium
+          ls Mu-Silicium/Binaries/myron | wc -l
+
       - name: overlay myronPkg
         run: |
           cp -r Platforms/Xiaomi/myronPkg Mu-Silicium/Platforms/Xiaomi/myronPkg
@@ -42,15 +62,6 @@ jobs:
           cp Resources/DTBs/myron.dtb Mu-Silicium/Resources/DTBs/myron.dtb
           ls Mu-Silicium/Platforms/Xiaomi/myronPkg
           sha256sum Mu-Silicium/Resources/DTBs/myron.dtb
-
-      - name: nasm shim and venv
-        run: |
-          D=Mu-Silicium/Mu_Basecore/BaseTools/Bin/mu_nasm_extdep
-          mkdir -p $D/Linux-x86-64
-          echo 'version: 20016.1.1' > $D/extdep_state.yaml
-          ln -sf /usr/bin/nasm /usr/bin/ndisasm $D/Linux-x86-64/ 2>/dev/null || true
-          python3 -m venv venv
-          venv/bin/pip install -r Mu-Silicium/pip-requirements.txt
 
       - name: build uefi
         run: |
@@ -71,3 +82,15 @@ jobs:
           path: Mu-Silicium/Build/**/FV/*.fd
           if-no-files-found: error
           retention-days: 14
+
+      # 固件卷挂到公开 release：不用登录、不用 token 就能下载，
+      # 本机直接下下来打 boot.img。
+      - name: publish firmware volume
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="fd-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}"
+          gh release create "$tag" --title "$tag" \
+            --notes "auto build of ${GITHUB_SHA}" \
+            Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd
