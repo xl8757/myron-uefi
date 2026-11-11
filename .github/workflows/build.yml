@@ -127,6 +127,15 @@ jobs:
           cp -r darwinboot/DarwinBootPkg Mu-Silicium/Platforms/Xiaomi/DarwinBootPkg
           ls Mu-Silicium/Platforms/Xiaomi
 
+      # CNTFRQ_EL0 在这颗芯片上读出来是 0（ABL 不写，Mu 也不写）。官方移植的
+      # Resources/MuPatches/Timer.patch 就是给这两个库加 19.2 MHz 兜底，否则
+      # 每一次 GetPerformanceCounter 都是在用 0 做除数，厂商驱动里那条
+      # ArmArchTimerLib.c:74 的断言也就永远成立。
+      - name: arch timer frequency fallback
+        run: |
+          source venv/bin/activate
+          python tools/apply_mu_timer_freq.py Mu-Silicium
+
       # build_uefi.py 只转发它自己 argument_map 里的键，页大小没法从 toml 传，
       # 所以直接在固定的 mkbootimg.py 上改默认值（与已知可启动的配方一致）。
       - name: pin boot image geometry
