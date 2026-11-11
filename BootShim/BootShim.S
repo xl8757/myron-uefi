@@ -25,7 +25,9 @@ _StackBase:
   .quad FD_BASE         /* Text Offset */
 
 _StackSize:
-  .quad FD_SIZE         /* Image Size */
+  /* Cover the shim and the firmware volume it copies. _Head and _Payload both
+   * live in .text, so this folds to a constant at assembly time. */
+  .quad FD_SIZE + _Payload - _Head
   .quad 0               /* Flags */
   .quad 0               /* Reserved */
   .quad 0               /* Reserved */

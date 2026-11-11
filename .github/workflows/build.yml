@@ -131,27 +131,16 @@ jobs:
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           echo "=== 产物 ==="
           # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
-          ls -l Mu-myron*.img BootShim/BootShim.bin 2>/dev/null || true
+          ls -l Mu-myron*.img BootShim/BootShim.bin
           fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
-          size=$(stat -c %s "$fd")
-          echo "FD size = $size"
           # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。
-          test "$size" -eq $((0x300000)) || { echo "FD 不是 0x300000 字节"; exit 1; }
+          test "$(stat -c %s "$fd")" -eq $((0x300000)) || { echo "FD 不是 0x300000 字节"; exit 1; }
           sha256sum "$fd"
-          # shim 必须比 Mu 原版 192 字节大：多出来的是 DAIF 屏蔽和 cache 同步。
-          shim=$(stat -c %s BootShim/BootShim.bin)
-          echo "BootShim size = $shim"
-          test "$shim" -gt 192 || { echo "shim 没有带上本次改动"; exit 1; }
           img=$(ls Mu-myron*.img | head -1)
-          test -f "$img" || { echo "没有生成 boot.img"; exit 1; }
-          sha256sum "$img"
-          python3 -c "
-          import struct, sys
-          data = open(sys.argv[1], 'rb').read()
-          assert data[:8] == b'ANDROID!', 'not an Android boot image'
-          ver = struct.unpack_from('<I', data, 1640)[0]
-          print('boot.img', len(data), 'bytes, header_version =', ver)
-          " "$img"
+          # 校验 shim 里确实带上了本次的两处修正（DAIF 屏蔽、跳转前 cache 同步），
+          # 并核对 boot.img 的头部参数与解压后的载荷。
+          python3 ../tools/check_artifacts.py --shim BootShim/BootShim.bin --img "$img"
+          sha256sum "$img" BootShim/BootShim.bin
           cp "$img" BootShim/../myron-boot.img
 
       - uses: actions/upload-artifact@v4
