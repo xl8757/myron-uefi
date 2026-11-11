@@ -1,7 +1,6 @@
 APRIORI DXE {
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
-  INF myronPkg/Drivers/MarkerDxe/Marker1.inf
 
   INF Binaries/myron/EnvDxeEnhanced/EnvDxeEnhanced.inf
 
@@ -23,6 +22,12 @@ APRIORI DXE {
   INF Binaries/myron/IPCCDxe/IPCCDxe.inf
   INF Binaries/myron/GlinkDxe/GlinkDxe.inf
   INF Binaries/myron/CmdDbDxe/CmdDbDxe.inf
+  INF Binaries/myron/MailboxDxe/MailboxDxe.inf
+  INF Binaries/myron/QcomScmiDxe/QcomScmiDxe.inf
+  INF Binaries/myron/Qup/Qup.inf
+  INF Binaries/myron/I3CMaster/I3CMaster.inf
+  INF Binaries/myron/PsStateDxe/PsStateDxe.inf
+  INF Binaries/myron/EXFG/EXFG.inf
   INF Binaries/myron/PwrUtilsDxe/PwrUtilsDxe.inf
   INF Binaries/myron/NpaDxe/NpaDxe.inf
   INF Binaries/myron/RpmhDxe/RpmhDxe.inf
@@ -34,7 +39,6 @@ APRIORI DXE {
   INF Binaries/myron/DALTLMM/DALTLMM.inf
   INF Binaries/myron/I2C/I2C.inf
   INF Binaries/myron/SPMI/SPMI.inf
-  INF myronPkg/Drivers/MarkerDxe/Marker2.inf
 
   INF MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
 
@@ -69,7 +73,6 @@ APRIORI DXE {
   INF MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
   INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
-  INF myronPkg/Drivers/MarkerDxe/Marker3.inf
 
   INF Binaries/myron/SPI/SPI.inf
   INF Binaries/myron/PmicGlinkDxe/PmicGlinkDxe.inf
@@ -110,6 +113,5 @@ APRIORI DXE {
   INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
 
   INF Binaries/myron/RscDxe/RscDxe.inf
-  INF myronPkg/Drivers/MarkerDxe/Marker4.inf
   # INF Binaries/aston/QcomPkg/Drivers/OGaugeAuthDxe/OGaugeAuth.inf  # not present in the myron stock firmware
 }

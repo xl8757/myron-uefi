@@ -23,7 +23,10 @@
   BUILD_TARGETS                  = RELEASE|DEBUG
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = myronPkg/myron.fdf
-  USE_CUSTOM_DISPLAY_DRIVER      = 1
+  # The panel is not re-initialised: ABL leaves a live framebuffer at 0xfc800000.
+  # SimpleFbDxe consumes it; a vendor display driver would own MDSS and clash
+  # with the running scan-out client.
+  USE_CUSTOM_DISPLAY_DRIVER      = 0
 
   #
   # 0 = SM8550-AB
@@ -38,6 +41,13 @@
   # DDR Memory
   #
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
+  # Captured MPIDRs: six cores at Aff2=0 and the two primes at Aff2=1.
+  gArmPlatformTokenSpaceGuid.PcdClusterCount|2
+  # SM8850 GIC addresses from the captured live device tree. Without these the
+  # platform inherits the SM8550 defaults and the GIC is programmed at the wrong
+  # address while interrupts are being routed.
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x17000000
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x17080000
 
   #
   # UEFI Stack
@@ -76,6 +86,13 @@
 
 [LibraryClasses]
   #
+  # SEC handoff. The KailuaPkg default calls ArmSmmuDetach (MdpStreams), which
+  # clears the translations of the display and firmware clients ABL left
+  # running. This override keeps that state and adds the DEBUG screen logger.
+  #
+  PlatformSecLib|myronPkg/Library/PlatformSecLib/PlatformSecLib.inf
+
+  #
   # Memory Libraries
   #
   MemoryMapLib|myronPkg/Library/MemoryMapLib/MemoryMapLib.inf
@@ -103,12 +120,3 @@
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
   myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
-
-  #
-  # 路标驱动：在这台机器上没有 UART 的情况下，用屏幕上的色带定位复位点。
-  # 只写 ABL 留下的 framebuffer，不碰显示控制器。
-  #
-  myronPkg/Drivers/MarkerDxe/Marker1.inf
-  myronPkg/Drivers/MarkerDxe/Marker2.inf
-  myronPkg/Drivers/MarkerDxe/Marker3.inf
-  myronPkg/Drivers/MarkerDxe/Marker4.inf

@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       display:
-        description: "显示驱动：custom=厂商 DisplayDxe（会初始化 MDSS）；simple=SimpleFbDxe（只用 ABL 留下的 framebuffer）"
+        description: "显示驱动：simple=SimpleFbDxe（用 ABL 留下的 framebuffer，默认）；custom=厂商 DisplayDxe（会初始化 MDSS）"
         type: choice
-        options: [custom, simple]
-        default: custom
+        options: [simple, custom]
+        default: simple
       skip:
-        description: "额外从 DXE.inc 里剔除的模块名（空格分隔，例如 DisplayDxe CPRDxe）"
+        description: "额外从 DXE.inc/APRIORI.inc 里剔除的模块名（空格分隔）"
         type: string
         default: ""
       label:
@@ -16,7 +16,7 @@ on:
         type: string
         default: ""
       build_type:
-        description: "构建类型"
+        description: "构建类型（DEBUG 才会注入 SEC 屏幕日志）"
         type: choice
         options: [DEBUG, RELEASE]
         default: DEBUG
@@ -24,12 +24,19 @@ on:
     paths:
       - 'Platforms/**'
       - 'Resources/**'
+      - 'BootShim/**'
+      - 'apply_screen_log.py'
       - 'validate_memory_map.py'
       - 'fetch_vendor_inputs.py'
       - '.github/workflows/build.yml'
 
 permissions:
   contents: write
+
+env:
+  # 与本板型已验证的固件源码一致。上游默认分支会漂移，SEC 流程一变，
+  # apply_screen_log.py 的锚点就对不上了。
+  MU_COMMIT: 46e4ac0800862fb3ee6da09f0028fbef4e767648
 
 jobs:
   build:
@@ -52,9 +59,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git build-essential uuid-dev nasm acpica-tools python3 python3-venv python3-pip clang lld llvm gcc-aarch64-linux-gnu libfuse3-dev
 
-      - name: clone Mu-Silicium
+      - name: clone Mu-Silicium (pinned)
         run: |
-          git clone --recursive --depth 1 https://github.com/Project-Silicium/Mu-Silicium.git
+          git init -q Mu-Silicium
+          git -C Mu-Silicium fetch --depth 1 https://github.com/Project-Silicium/Mu-Silicium.git "$MU_COMMIT"
+          git -C Mu-Silicium checkout -q FETCH_HEAD
+          git -C Mu-Silicium submodule update --init --recursive --depth 1
           echo "mu at $(git -C Mu-Silicium rev-parse --short HEAD)"
 
       - name: venv and nasm shim
@@ -83,21 +93,25 @@ jobs:
           cp -r unixnu/package/UniXNUPkg Mu-Silicium/Platforms/Xiaomi/UniXNUPkg
           cp -r darwinboot/DarwinBootPkg Mu-Silicium/Platforms/Xiaomi/DarwinBootPkg
           ls Mu-Silicium/Platforms/Xiaomi
-          ls Mu-Silicium/Platforms/Xiaomi/DarwinBootPkg
 
-      - name: overlay myronPkg
+      - name: overlay myronPkg and BootShim
         run: |
           cp -r Platforms/Xiaomi/myronPkg Mu-Silicium/Platforms/Xiaomi/myronPkg
           cp Resources/Configs/myron.toml Mu-Silicium/Resources/Configs/myron.toml
           mkdir -p Mu-Silicium/Resources/DTBs
           cp Resources/DTBs/myron.dtb Mu-Silicium/Resources/DTBs/myron.dtb
-          ls Mu-Silicium/Platforms/Xiaomi/myronPkg
+          # BootShim.S：入口屏蔽 DAIF、跳转前同步 cache。
+          # ScreenLog.c/ScreenFont.h：PlatformSecLib 通过相对路径包含它们。
+          cp -r BootShim/. Mu-Silicium/BootShim/
+          grep -q 'daifset' Mu-Silicium/BootShim/BootShim.S
+          grep -q 'myron_screen_sec_entry' Mu-Silicium/BootShim/ScreenLog.c
+          ls Mu-Silicium/BootShim
           sha256sum Mu-Silicium/Resources/DTBs/myron.dtb
 
       # 实验开关：不改仓库、只改构建产物，用于定位复位点。
       - name: apply experiment knobs
         env:
-          DISPLAY_MODE: ${{ inputs.display || 'custom' }}
+          DISPLAY_MODE: ${{ inputs.display || 'simple' }}
           SKIP_MODULES: ${{ inputs.skip || '' }}
         run: |
           python3 tools/experiment.py \
@@ -106,37 +120,49 @@ jobs:
             --skip $SKIP_MODULES
 
       - name: build uefi
+        env:
+          BUILD_TYPE: ${{ inputs.build_type || 'DEBUG' }}
         run: |
           cd Mu-Silicium
           source ../venv/bin/activate
-          python3 build_uefi.py -d myron -r ${{ inputs.build_type || 'DEBUG' }}
+          if [ "$BUILD_TYPE" = DEBUG ]; then
+            python3 ../apply_screen_log.py --mu-root .
+          fi
+          python3 build_uefi.py -d myron -r "$BUILD_TYPE"
+          echo "=== 产物 ==="
+          find Build/myronPkg -maxdepth 4 -type f \( -name '*.fd' -o -name '*.img' \) -exec ls -l {} \;
           fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
-          stat -c %s "$fd" || true
+          size=$(stat -c %s "$fd")
+          echo "FD size = $size"
+          # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。
+          test "$size" -eq $((0x300000)) || { echo "FD 不是 0x300000 字节"; exit 1; }
           sha256sum "$fd"
-
-      - name: collect
-        run: |
-          find Mu-Silicium/Build -name '*.fd' -exec ls -l {} \;
+          for img in Build/myronPkg/*/FV/*.img; do [ -f "$img" ] && sha256sum "$img"; done || true
 
       - uses: actions/upload-artifact@v4
         with:
           name: uefi-myron
-          path: Mu-Silicium/Build/**/FV/*.fd
+          path: |
+            Mu-Silicium/Build/**/FV/*.fd
+            Mu-Silicium/Build/**/FV/*.img
           if-no-files-found: error
           retention-days: 14
 
-      # 固件卷挂到公开 release：不用登录、不用 token 就能下载，本机直接下下来打 boot.img。
+      # 固件卷和 boot.img 挂到公开 release：不用登录、不用 token 就能下载。
       - name: publish firmware volume
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           label="${{ inputs.label }}"
-          mode="${{ inputs.display || 'custom' }}"
+          mode="${{ inputs.display || 'simple' }}"
           tag="fd-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}${label:+-$label}"
           fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
-          notes=$(printf 'display=%s\nbuild=%s\nskip=%s\nsha256=%s\nsource=%s' \
+          notes=$(printf 'display=%s\nbuild=%s\nskip=%s\nsha256=%s\nsource=%s\nmu=%s' \
             "$mode" "${{ inputs.build_type || 'DEBUG' }}" "${{ inputs.skip }}" \
-            "$(sha256sum "$fd" | cut -d' ' -f1)" "${GITHUB_SHA}")
-          gh release create "$tag" --title "$tag" --notes "$notes" "$fd"
+            "$(sha256sum "$fd" | cut -d' ' -f1)" "${GITHUB_SHA}" "$MU_COMMIT")
+          assets=("$fd")
+          for img in Mu-Silicium/Build/myronPkg/*/FV/*.img; do [ -f "$img" ] && assets+=("$img"); done
+          ls -l "${assets[@]}"
+          gh release create "$tag" --title "$tag" --notes "$notes" "${assets[@]}"
           echo "TAG=$tag" >> "$GITHUB_ENV"

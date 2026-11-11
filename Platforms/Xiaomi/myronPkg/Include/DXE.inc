@@ -45,6 +45,12 @@
 
   INF Binaries/myron/UFSDxe/UFSDxe.inf
   INF Binaries/myron/CmdDbDxe/CmdDbDxe.inf
+  INF Binaries/myron/MailboxDxe/MailboxDxe.inf
+  INF Binaries/myron/QcomScmiDxe/QcomScmiDxe.inf
+  INF Binaries/myron/Qup/Qup.inf
+  INF Binaries/myron/I3CMaster/I3CMaster.inf
+  INF Binaries/myron/PsStateDxe/PsStateDxe.inf
+  INF Binaries/myron/EXFG/EXFG.inf
   INF Binaries/myron/PwrUtilsDxe/PwrUtilsDxe.inf
   INF Binaries/myron/RpmhDxe/RpmhDxe.inf
   INF Binaries/myron/NpaDxe/NpaDxe.inf

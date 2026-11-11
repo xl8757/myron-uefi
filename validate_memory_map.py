@@ -30,7 +30,11 @@ text = MAP.read_text(encoding="utf-8")
 entries = []
 for match in ENTRY.finditer(text):
     item = match.groupdict()
-    item["name"] = item["name"].strip()
+    # Mu looks a region up with an exact AsciiStriCmp. Stripping the name here
+    # would hide the padded names that made "Display_Reserved" unfindable, so
+    # edge whitespace is a hard failure instead of a silent normalisation.
+    if item["name"] != item["name"].strip():
+        fail(f'{item["name"]!r} has edge whitespace; Mu uses exact AsciiStriCmp name lookup')
     item["base"] = int(item["base"], 16)
     item["size"] = int(item["size"], 16)
     entries.append(item)
@@ -39,9 +43,28 @@ if len(entries) < 70:
     fail(f"only {len(entries)} descriptors parsed; expected the live-FDT map plus UEFI allocations")
 
 by_name = {entry["name"]: entry for entry in entries}
+if len(by_name) != len(entries):
+    fail("duplicate memory region name")
+
+for entry in entries:
+    if entry["base"] % 4096 or entry["size"] % 4096:
+        fail(f"{entry['name']} is not aligned to the ARM MMU's 4K mapping granule")
+
+# The display and the shared-memory clients keep running after the handoff.
+# A write-back mapping of either one loses writes the firmware never sees.
+for name, attribute in (
+    ("Display_Reserved", "WRITE_THROUGH_XN"),
+    ("SMEM_REGION", "UNCACHED_UNBUFFERED_XN"),
+    ("PDP_NS_SHARED_REGION", "UNCACHED_UNBUFFERED_XN"),
+    ("SHM", "UNCACHED_UNBUFFERED_XN"),
+):
+    if not re.search(r'\{"' + re.escape(name) + r'"[^\n]*,\s*' + attribute + r'\}', text):
+        fail(f"{name} must retain its framebuffer/shared-memory cache attribute")
+
 required = {
     "GUNYAH_HYP_REGION": (0x80000000, 0x00E00000),
-    "SPLASH_REGION": (0xFC800000, 0x02B00000),
+    "Display_Reserved": (0xFC800000, 0x02B00000),
+    "DUMP_DISPLAY_REGION": (0xFF3FF000, 0x00001000),
     "RAMOOPS_REGION": (0xFF400000, 0x00200000),
     "HYPERVISOR_EXTENDED_": (0xC3DD0000, 0x00A30000),
     "TRUST_UI_VM_REGION": (0xF3800000, 0x05000000),

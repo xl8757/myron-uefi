@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = MyronPlatformSecLib
+  FILE_GUID = 7F3A18C2-4D6B-4E90-9C1A-5B8E2D74A6F3
+  MODULE_TYPE = SEC
+  VERSION_STRING = 1.0
+  LIBRARY_CLASS = PlatformSecLib
+
+[Sources]
+  PlatformSec.c
+  ScreenLog.c
+
+[Sources.AArch64]
+  AArch64/PlatformHelper.S
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+  QcomPkg/QcomPkg.dec
+
+[BuildOptions]
+  *_*_AARCH64_CC_FLAGS = -mgeneral-regs-only -mstrict-align
+
+[FixedPcd]
+  gArmPlatformTokenSpaceGuid.PcdCPUCoresStackBase
+  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
