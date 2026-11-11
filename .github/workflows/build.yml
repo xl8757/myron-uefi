@@ -54,6 +54,14 @@ jobs:
           python fetch_vendor_inputs.py --mu-root Mu-Silicium
           ls Mu-Silicium/Binaries/myron | wc -l
 
+      # myronPkg 的 DSC/FDF 引用了 UniXNUPkg（UniXNU 菜单、UniXNUDxe、UniXNULib）。
+      # 放进 Platforms/Xiaomi/ 后，DSC 里 "UniXNUPkg/..." 才能按包路径解析到。
+      - name: unixnu package
+        run: |
+          git clone --depth 1 https://github.com/xl8757/unixnu-myron-build.git unixnu
+          cp -r unixnu/package/UniXNUPkg Mu-Silicium/Platforms/Xiaomi/UniXNUPkg
+          ls Mu-Silicium/Platforms/Xiaomi/UniXNUPkg
+
       - name: overlay myronPkg
         run: |
           cp -r Platforms/Xiaomi/myronPkg Mu-Silicium/Platforms/Xiaomi/myronPkg
