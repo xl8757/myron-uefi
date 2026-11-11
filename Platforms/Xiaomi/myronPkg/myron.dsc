@@ -103,3 +103,12 @@
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
   myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
+
+  #
+  # 路标驱动：在这台机器上没有 UART 的情况下，用屏幕上的色带定位复位点。
+  # 只写 ABL 留下的 framebuffer，不碰显示控制器。
+  #
+  myronPkg/Drivers/MarkerDxe/Marker1.inf
+  myronPkg/Drivers/MarkerDxe/Marker2.inf
+  myronPkg/Drivers/MarkerDxe/Marker3.inf
+  myronPkg/Drivers/MarkerDxe/Marker4.inf
