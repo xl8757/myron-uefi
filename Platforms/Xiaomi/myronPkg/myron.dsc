@@ -130,10 +130,11 @@
 
 [Components]
   #
-  # Device tree. Publishes gFdtTableGuid from the FV blob before the vendor DXE
-  # drivers run; they resolve their regions through the device tree.
+  # Device tree. Mu derives the DtbExtension address by scanning the stock UEFI
+  # image in "FD Reserved", which does not exist when the payload comes from
+  # "fastboot boot". This PEIM republishes the tree ABL passed in x0 instead.
   #
-  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  myronPkg/Drivers/DtbExtensionHobPei/DtbExtensionHobPei.inf
 
   #
   # ACPI Tables

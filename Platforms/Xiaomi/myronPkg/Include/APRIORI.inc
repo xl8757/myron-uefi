@@ -2,11 +2,6 @@ APRIORI DXE {
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 
-  # 设备树必须比厂商驱动先发布：EnvDxeEnhanced 在下一个位置就要用 SMEM 区域，
-  # 而它只能从 gFdtTableGuid 指的那棵树里查。没进 APRIORI 的话它会排到本表
-  # 所有模块之后，等于白装。
-  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
-
   INF Binaries/myron/EnvDxeEnhanced/EnvDxeEnhanced.inf
 
   INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf

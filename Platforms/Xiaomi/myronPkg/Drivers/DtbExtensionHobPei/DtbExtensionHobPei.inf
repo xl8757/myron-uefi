@@ -1,0 +1,34 @@
+## @file
+#  Publish the device tree ABL handed over as the DtbExtension HOB.
+#
+#  Mu's PlatformPeiLib derives that address by scanning the "FD Reserved" region
+#  for the stock UEFI's HOB registration function, which only exists when the
+#  stock firmware is the one running. A "fastboot boot" payload has to supply it
+#  itself; see DtbExtensionHobPei.c.
+#
+#  Copyright (c) 2026, myron port.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DtbExtensionHobPei
+  FILE_GUID                      = 6B1F4C52-8E57-4C1D-9E3A-2F0B7A5D94C1
+  MODULE_TYPE                    = PEIM
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DtbExtensionHobPeim
+
+[Sources]
+  DtbExtensionHobPei.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  QcomPkg/QcomPkg.dec
+
+[LibraryClasses]
+  DebugLib
+  HobLib
+  PeimEntryPoint
+
+[Guids]
+  gEfiDtbExtensionHobGuid
