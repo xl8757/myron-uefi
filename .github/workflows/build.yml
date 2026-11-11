@@ -64,10 +64,20 @@ jobs:
           APT="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=8 -o Acquire::Retries=1"
           timeout 150 sudo apt-get $APT update -qq || echo "== apt update 失败，继续 =="
           timeout 180 sudo apt-get $APT install -y --no-install-recommends \
-              uuid-dev nasm acpica-tools python3-venv python3-pip \
+              uuid-dev nasm acpica-tools python3-venv python3-pip llvm \
               gcc-aarch64-linux-gnu libfuse3-dev || echo "== apt install 失败，继续 =="
+          # BootShim 的 Makefile 调 llvm-objcopy。镜像里装着 LLVM 但它的 bin 目录
+          # 不一定在 PATH 上，缺了就补个软链，别让整个构建挂在第 127 号错误上。
+          if ! command -v llvm-objcopy >/dev/null 2>&1; then
+            for c in /usr/lib/llvm-*/bin/llvm-objcopy /usr/bin/llvm-objcopy-*; do
+              [ -x "$c" ] && sudo ln -sf "$c" /usr/local/bin/llvm-objcopy && break
+            done
+          fi
+          if ! command -v llvm-objcopy >/dev/null 2>&1 && command -v aarch64-linux-gnu-objcopy >/dev/null 2>&1; then
+            sudo ln -sf "$(command -v aarch64-linux-gnu-objcopy)" /usr/local/bin/llvm-objcopy
+          fi
           echo "== 工具清单 =="
-          for t in nasm iasl aarch64-linux-gnu-gcc clang ld.lld python3; do
+          for t in nasm iasl aarch64-linux-gnu-gcc clang ld.lld llvm-objcopy python3; do
             printf '%-24s ' "$t"; command -v "$t" || echo MISSING
           done
           ls -l /usr/include/uuid/uuid.h /usr/include/fuse3/fuse.h 2>/dev/null || true
