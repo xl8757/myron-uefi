@@ -107,11 +107,16 @@ READ_LOCK_STATUS   = TRUE
   INF QcomPkg/Drivers/IortDtDxe/IortDtDxe.inf
 
   # Device Tree
-  #INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
-  #FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
-  #  SECTION RAW = myronPkg/FdtBlob/sm8550-oneplus-myron.dtb
-  #  SECTION UI = "DeviceTreeBlob"
-  #}
+  #
+  # 高通那批厂商 DXE 是照着设备树找区域的：SMEM 的基址、ChipInfo 的版本、
+  # 一堆平台的保留段，全在 /reserved-memory 和 qcom,smem 里。以前这段是注释
+  # 掉的，于是 EnvDxeEnhanced 的库构造函数拿 EFI_NOT_FOUND，它内部的 SmemLib
+  # 锁没初始化，紧接着就是 spinlock.c:108 的断言。
+  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
+    SECTION RAW = myronPkg/FdtBlob/myron.dtb
+    SECTION UI = "DeviceTreeBlob"
+  }
 
   !include QcomPkg/Extra.fdf.inc
 

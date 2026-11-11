@@ -119,6 +119,12 @@
 
 [Components]
   #
+  # Device tree. Publishes gFdtTableGuid from the FV blob before the vendor DXE
+  # drivers run; they resolve their regions through the device tree.
+  #
+  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+
+  #
   # ACPI Tables
   #
   aston/AcpiTables.inf

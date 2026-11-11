@@ -1,0 +1,14 @@
+canoe.dtb — the stock Canoe v2 base device tree of this unit.
+
+Read from the same stock image the vendor inputs come from: the DTB that ABL
+appends to the boot image, 581416 bytes, SHA-256
+42a2257670e909f82540c3a156444f17f50644702363a6b0f747b1d48e3aa61b.
+
+It is the copy the payload already carries; here it is embedded in the firmware
+volume so DtPlatformDxe can publish gFdtTableGuid for the vendor DXE drivers,
+which look their regions up in the device tree instead of the old cfg files.
+
+Note that ABL overlays the dtbo from the vendor_boot image on top of this tree at
+boot time. The FV copy has no overlay, so anything that only exists in the
+overlay (the splash region label, for one) has to come from the live tree that
+arrives in x0.
