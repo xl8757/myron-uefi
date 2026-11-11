@@ -77,12 +77,22 @@ jobs:
           python3 -m venv venv
           venv/bin/pip install -r Mu-Silicium/pip-requirements.txt
           venv/bin/pip install uefi_firmware
+          venv/bin/pip install capstone
 
       - name: vendor inputs
         run: |
           source venv/bin/activate
           python fetch_vendor_inputs.py --mu-root Mu-Silicium
           ls Mu-Silicium/Binaries/myron | wc -l
+
+      # Xiaomi 的预编译 DXE 是 DEBUG 构建，断言里烧死了 CpuDeadLoop：一个返回
+      # EFI_NOT_FOUND 的库构造函数就能把整机停死，而我们改 PcdDebugPropertyMask
+      # 也管不到他们的镜像。把断言打印机里那两处调用（inertial delay 与
+      # CpuDeadLoop）改成 nop，打印照旧、栈平衡不变，效果等同 RELEASE 构建。
+      - name: neutralise vendor assert deadloops
+        run: |
+          source venv/bin/activate
+          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/myron --require 200
 
       # myronPkg 的 DSC/FDF 引用了 UniXNUPkg 和 DarwinBootPkg。
       # UniXNU 的固件构建把 PACKAGES_PATH 设成 {tree}/package:{tree}/drivers/DarwinBoot，
