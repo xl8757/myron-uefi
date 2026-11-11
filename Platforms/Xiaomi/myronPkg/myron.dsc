@@ -134,7 +134,7 @@
   # image in "FD Reserved", which does not exist when the payload comes from
   # "fastboot boot". This PEIM republishes the tree ABL passed in x0 instead.
   #
-  myronPkg/Drivers/DtbExtensionHobPei/DtbExtensionHobPei.inf
+  myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
 
   #
   # ACPI Tables

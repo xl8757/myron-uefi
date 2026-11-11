@@ -110,9 +110,9 @@ READ_LOCK_STATUS   = TRUE
   #
   # 高通那批厂商 DXE 是照着设备树找区域的。Mu 默认靠扫「FD Reserved」里的原厂
   # UEFI 机器码来取 DtbExtension 地址（见 XblProtocols.c），而内存启动时那块
-  # 内存里没有原厂固件，扫描必然落空。改由我们自己的 PEIM 把 ABL 传进来的树
+  # 内存里没有原厂固件，扫描必然落空。改由我们自己的驱动把 ABL 传进来的树
   # 重新发布成 gEfiDtbExtensionHobGuid；这块 FREEFORM 是它的静态副本。
-  INF myronPkg/Drivers/DtbExtensionHobPei/DtbExtensionHobPei.inf
+  INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
   FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
     SECTION RAW = myronPkg/FdtBlob/myron.dtb
     SECTION UI = "DeviceTreeBlob"

@@ -14,8 +14,9 @@
   of them, and its SmemLib then asserts on an uninitialised lock.
 
   Mu's SEC already records the x0 argument ABL hands over - the live device
-  tree, with the dtbo overlay applied - in a GUID HOB. This PEIM republishes
-  that same address under the GUID the vendor drivers look for.
+  tree, with the dtbo overlay applied - in a GUID HOB. This driver republishes
+  that same address under the GUID the vendor drivers look for. It runs as the
+  first DXE driver, ahead of EnvDxeEnhanced and the rest of the vendor stack.
 
 **/
 
@@ -91,39 +92,44 @@ IsDeviceTree (
 /**
   Build the DtbExtension HOB from the device tree ABL passed in x0.
 
-  @retval EFI_SUCCESS  The HOB was built, or one already existed.
-  @retval Others       No usable device tree was found.
+  Returning an error here would make the dispatcher print a load failure and
+  move on, which only adds noise: the interesting diagnostic is the DEBUG line.
+  Always report success and let the next driver fail loudly if the tree is
+  genuinely missing.
+
+  @retval EFI_SUCCESS  Always.
 **/
 EFI_STATUS
 EFIAPI
-DtbExtensionHobPeim (
-  IN       EFI_PEI_FILE_HANDLE  FileHandle,
-  IN CONST EFI_PEI_SERVICES     **PeiServices
+DtbExtensionHobEntry (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_HOB_GUID_TYPE    *Hob;
+  EFI_HOB_GUID_TYPE     *Hob;
   EFI_PHYSICAL_ADDRESS  Dtb;
   EFI_PHYSICAL_ADDRESS  Existing;
 
   if (GetFirstGuidHob (&gEfiDtbExtensionHobGuid) != NULL) {
+    DEBUG ((DEBUG_ERROR, "DTBHOB: DtbExtension already published, keeping it\n"));
     return EFI_SUCCESS;
   }
 
   Hob = GetFirstGuidHob (&mEntryArgHobGuid);
   if (Hob == NULL) {
     DEBUG ((DEBUG_ERROR, "DTBHOB: no entry argument HOB, ABL passed no tree\n"));
-    return EFI_NOT_FOUND;
+    return EFI_SUCCESS;
   }
 
   if (GET_GUID_HOB_DATA_SIZE (Hob) < sizeof (UINT64)) {
     DEBUG ((DEBUG_ERROR, "DTBHOB: entry argument HOB too small\n"));
-    return EFI_COMPROMISED_DATA;
+    return EFI_SUCCESS;
   }
 
   Dtb = *(CONST UINT64 *)GET_GUID_HOB_DATA (Hob);
   if (!IsDeviceTree (Dtb)) {
     DEBUG ((DEBUG_ERROR, "DTBHOB: x0 0x%lx is not a device tree\n", Dtb));
-    return EFI_NOT_FOUND;
+    return EFI_SUCCESS;
   }
 
   Existing = Dtb;
