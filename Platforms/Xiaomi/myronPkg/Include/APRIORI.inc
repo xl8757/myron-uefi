@@ -1,117 +1,20 @@
 APRIORI DXE {
+  #
+  # 只保留 DXE 核心和 PCD 驱动。
+  #
+  # 原厂固件卷里没有 APRIORI 文件：把那个 0x2a8000 的卷按 FFS 走一遍，
+  # 225 个条目全是模块和数据文件，没有一项是 GUID 列表形式的 APRIORI。
+  # 也就是说原厂的调度顺序就是文件的物理顺序，而这个物理顺序我们在
+  # DXE.inc 里已经照抄了（SmemDxe 在原厂是第 54 项，在我们这里是第 53 项）。
+  #
+  # 之前这里把几乎全部厂商驱动按另一套顺序重排了一遍，后果是把
+  # SmemDxe 从第 54 位提到第 9 位，跑到了 DALSys / HWIODxeDriver /
+  # ChipInfo 前面。这些驱动的 depex 都是 TRUE，分发器不会拦，
+  # 于是它们在依赖还没就绪时就启动，在库构造函数里拿到 EFI_NOT_FOUND
+  # 并触发厂商 DEBUG 构建里编译进去的断言死循环。
+  #
+  # 依赖顺序这种事不该由我们再猜一遍：原厂怎么排，就怎么排。
+  #
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
-
-  INF Binaries/myron/EnvDxeEnhanced/EnvDxeEnhanced.inf
-
-  INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
-  INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
-  INF MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
-  INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
-  INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
-  INF EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
-  INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
-
-  INF Binaries/myron/SmemDxe/SmemDxe.inf
-  INF Binaries/myron/DALSys/DALSys.inf
-  INF Binaries/myron/HWIODxeDriver/HWIODxeDriver.inf
-  INF Binaries/myron/ChipInfo/ChipInfo.inf
-  INF Binaries/myron/PlatformInfoDxeDriver/PlatformInfoDxeDriver.inf
-  INF Binaries/myron/HALIOMMU/HALIOMMU.inf
-  INF Binaries/myron/ULogDxe/ULogDxe.inf
-  INF Binaries/myron/IPCCDxe/IPCCDxe.inf
-  INF Binaries/myron/GlinkDxe/GlinkDxe.inf
-  INF Binaries/myron/CmdDbDxe/CmdDbDxe.inf
-  INF Binaries/myron/MailboxDxe/MailboxDxe.inf
-  INF Binaries/myron/QcomScmiDxe/QcomScmiDxe.inf
-  INF Binaries/myron/Qup/Qup.inf
-  INF Binaries/myron/I3CMaster/I3CMaster.inf
-  INF Binaries/myron/PsStateDxe/PsStateDxe.inf
-  INF Binaries/myron/EXFG/EXFG.inf
-  INF Binaries/myron/PwrUtilsDxe/PwrUtilsDxe.inf
-  INF Binaries/myron/NpaDxe/NpaDxe.inf
-  INF Binaries/myron/RpmhDxe/RpmhDxe.inf
-  INF Binaries/myron/VcsDxe/VcsDxe.inf
-  INF Binaries/myron/ClockDxe/ClockDxe.inf
-  INF Binaries/myron/ICBDxe/ICBDxe.inf
-  INF Binaries/myron/ShmBridgeDxeLA/ShmBridgeDxeLA.inf
-  INF Binaries/myron/ScmDxeCompat/ScmDxeCompat.inf
-  INF Binaries/myron/DALTLMM/DALTLMM.inf
-  INF Binaries/myron/I2C/I2C.inf
-  INF Binaries/myron/SPMI/SPMI.inf
-
-  INF MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
-
-  INF Binaries/myron/PmicDxe/PmicDxe.inf
-  INF Binaries/myron/DiskIoDxe/DiskIoDxe.inf
-  INF Binaries/myron/PartitionDxe/PartitionDxe.inf
-
-  INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
-
-  INF Binaries/myron/SdccDxe/SdccDxe.inf
-  INF Binaries/myron/UFSDxe/UFSDxe.inf
-
-  INF FatPkg/EnhancedFatDxe/Fat.inf
-
-  INF Binaries/myron/TzDxeLA/TzDxeLA.inf
-
-  INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
-
-  INF Binaries/myron/DDRInfoDxe/DDRInfoDxe.inf
-  # INF Binaries/aston/QcomPkg/Drivers/OcdtDxe/OplusProject.inf  # not present in the myron stock firmware
-  INF Binaries/myron/FeatureEnablerDxe/FeatureEnablerDxe.inf
-  INF Binaries/myron/PILProxyDxe/PILProxyDxe.inf
-  INF Binaries/myron/PILDxe/PILDxe.inf
-  INF Binaries/myron/SPSSDxe/SPSSDxe.inf
-
-  INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
-  INF MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
-  INF EmbeddedPkg/EmbeddedMonotonicCounter/EmbeddedMonotonicCounter.inf
-  INF EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
-  INF MdeModulePkg/Universal/PrintDxe/PrintDxe.inf
-  INF MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
-  INF MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
-  INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
-  INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
-
-  INF Binaries/myron/SPI/SPI.inf
-  INF Binaries/myron/PmicGlinkDxe/PmicGlinkDxe.inf
-  INF Binaries/myron/UsbPwrCtrlDxe/UsbPwrCtrlDxe.inf
-  INF Binaries/myron/QcomChargerDxeLA/QcomChargerDxeLA.inf
-  INF Binaries/myron/ChargerExDxe/ChargerExDxe.inf
-  INF Binaries/myron/UsbfnDwc3Dxe/UsbfnDwc3Dxe.inf
-  INF Binaries/myron/XhciPciEmulation/XhciPciEmulation.inf
-  INF Binaries/myron/XhciDxe/XhciDxe.inf
-
-  INF MdeModulePkg/Bus/Usb/UsbBusDxe/UsbBusDxe.inf
-  INF MdeModulePkg/Bus/Usb/UsbKbDxe/UsbKbDxe.inf
-  INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
-
-  INF Binaries/myron/UsbMsdDxe/UsbMsdDxe.inf
-  INF Binaries/myron/UsbDeviceDxe/UsbDeviceDxe.inf
-  INF Binaries/myron/UsbConfigDxe/UsbConfigDxe.inf
-  INF Binaries/myron/ButtonsDxe/ButtonsDxe.inf
-  INF Binaries/myron/TsensDxe/TsensDxe.inf
-
-!if $(USE_CUSTOM_DISPLAY_DRIVER) == 1
-  INF Binaries/myron/DisplayDxe/DisplayDxe.inf
-!else
-  INF SiliciumPkg/Drivers/SimpleFbDxe/SimpleFbDxe.inf
-!endif
-
-  # INF Binaries/aston/QcomPkg/Drivers/LimitsDxe/LimitsDxe.inf  # not present in the myron stock firmware
-!if $(USE_CUSTOM_DISPLAY_DRIVER) == 1
-  INF Binaries/myron/CPRDxe/CPRDxe.inf
-!endif
-  INF Binaries/myron/GpiDxe/GpiDxe.inf
-  INF Binaries/myron/UCDxe/UCDxe.inf
-  INF Binaries/myron/RngDxe/RngDxe.inf
-
-  INF EmbeddedPkg/SimpleTextInOutSerial/SimpleTextInOutSerial.inf
-  INF MdeModulePkg/Universal/Console/ConPlatformDxe/ConPlatformDxe.inf
-  INF MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
-  INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
-
-  INF Binaries/myron/RscDxe/RscDxe.inf
-  # INF Binaries/aston/QcomPkg/Drivers/OGaugeAuthDxe/OGaugeAuth.inf  # not present in the myron stock firmware
 }
