@@ -31,6 +31,16 @@
 #define AUTOLOG_TICK_2S       20000000ULL
 #define AUTOLOG_DELAY_TICKS   7   /* 14 s: let the 10 s menu countdown finish */
 
+//
+// The official viewer's event loop only exits on a key press. This board has
+// no ConIn, and Run() is called synchronously from a timer callback, so while
+// it rotates frames the menu's own countdown is blocked. The QR export has
+// already served its purpose (two complete logs, root cause found and fixed),
+// so leave it off for this round and let the 30 s menu countdown reach
+// HelloPayload.efi. Set to 1 to restore QR log capture on a future build.
+//
+#define AUTOLOG_ENABLE_QR_VIEWER  0
+
 STATIC BOOLEAN  mStarted = FALSE;
 STATIC UINTN    mTicks   = 0;
 
@@ -109,8 +119,10 @@ AutoLogTick (
   EFI_HANDLE                    *Handles;
   UINTN                         Count;
   UNIXNU_MENU_PLUGIN_PROTOCOL   *Plugin;
+#if AUTOLOG_ENABLE_QR_VIEWER
   UNIXNU_PLUGIN_RECT            Content;
   UINT32                        Side;
+#endif
 
   if (mStarted) {
     return;
@@ -155,16 +167,27 @@ AutoLogTick (
   mStarted = TRUE;
   gBS->SetTimer (Event, TimerCancel, 0);
 
+  //
+  // One-shot, non-blocking volume snapshot. It returns immediately, so the
+  // menu keeps ownership of the screen and its countdown can finish.
+  //
+  ReportVolumes ();
+
+#if AUTOLOG_ENABLE_QR_VIEWER
   Side = MIN (Gop->Mode->Info->HorizontalResolution, Gop->Mode->Info->VerticalResolution);
   Content.Width  = Side;
   Content.Height = Side;
   Content.X      = (Gop->Mode->Info->HorizontalResolution - Side) / 2;
   Content.Y      = (Gop->Mode->Info->VerticalResolution - Side) / 2;
 
-  ReportVolumes ();
   DEBUG ((DEBUG_ERROR, "AUTOLOG: starting official QR log viewer (%ux%u)\n",
           Content.Width, Content.Height));
   Plugin->Run (Plugin, Gop, &Content, NULL);
+#else
+  (VOID)Plugin;
+  (VOID)Gop;
+  DEBUG ((DEBUG_ERROR, "AUTOLOG: QR viewer disabled, leaving menu countdown intact\n"));
+#endif
 }
 
 EFI_STATUS
