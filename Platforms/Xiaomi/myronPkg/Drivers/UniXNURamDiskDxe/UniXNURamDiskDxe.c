@@ -139,75 +139,53 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 #define RAMDISK_FALLBACK_MAX   0x01000000
 
 //
-// Diagnostics for a board with no spare output channel: the console scrolls and
-// BDS clears it, so nothing printed during DXE survives long enough to read.
-// A timer redraws a few squares in the top-left corner of the panel instead,
-// over whatever is on screen, and the squares say which path published the
-// volume. One square: the firmware volume copy. Two: the loader's /chosen.
-// Three: the fixed address. A red square: the firmware volume lookup failed.
+// Diagnostics for a board with no spare output channel. Nothing printed during
+// DXE survives: BDS clears the console and the menu app repaints over it. A
+// timer reprints one line into the console instead, so the state stays visible
+// in the same area the menu app logs to. The line is overwritten in place with
+// a carriage return rather than scrolling.
 //
-#define FB_BASE        0xFC800000ULL
-#define FB_STRIDE      4800
-#define FB_SQUARE      24
-#define FB_GAP         32
-#define FB_WHITE       0xFFFFFFFFU
-#define FB_RED         0xFFFF0000U
-
-STATIC UINTN   mMarkerCount;
-STATIC UINT32  mMarkerColor = FB_WHITE;
-
-STATIC
-VOID
-DrawSquares (
-  VOID
-  )
-{
-  UINT32  *Row;
-  UINTN   Index;
-  UINTN   X;
-  UINTN   Y;
-
-  if (mMarkerCount == 0) {
-    return;
-  }
-
-  for (Index = 0; Index < mMarkerCount; Index++) {
-    for (Y = 0; Y < FB_SQUARE; Y++) {
-      Row = (UINT32 *)(UINTN)(FB_BASE + (UINT64)Y * FB_STRIDE);
-      for (X = 0; X < FB_SQUARE; X++) {
-        Row[Index * FB_GAP + X] = mMarkerColor;
-      }
-    }
-  }
-}
+STATIC CHAR16  mStatus[96] = L"\rUNIXNURAMDISK: not started";
 
 STATIC
 VOID
 EFIAPI
-MarkerTick (
+StatusTick (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
 {
-  DrawSquares ();
+  if (gST != NULL) {
+    gST->ConOut->OutputString (gST->ConOut, mStatus);
+  }
 }
 
 STATIC
 VOID
-SetMarker (
-  IN UINTN   Count,
-  IN UINT32  Color
+PublishStatus (
+  IN CONST CHAR16  *Text
   )
 {
   EFI_EVENT  Event;
 
-  mMarkerCount = Count;
-  mMarkerColor = Color;
-  DrawSquares ();
+  UINTN  Index;
+
+  Index          = 0;
+  mStatus[Index++] = L'\r';
+  while ((Index < ARRAY_SIZE (mStatus) - 1) && (Text[Index - 1] != L'\0')) {
+    mStatus[Index] = Text[Index - 1];
+    Index++;
+  }
+
+  mStatus[Index] = L'\0';
+
+  if (gST != NULL) {
+    gST->ConOut->OutputString (gST->ConOut, mStatus);
+  }
 
   Event = NULL;
-  if (!EFI_ERROR (gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_APPLICATION, MarkerTick, NULL, &Event))) {
-    gBS->SetTimer (Event, TimerPeriodic, 10000000);
+  if (!EFI_ERROR (gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_APPLICATION, StatusTick, NULL, &Event))) {
+    gBS->SetTimer (Event, TimerPeriodic, 20000000);
   }
 }
 
@@ -222,15 +200,14 @@ PublishRange (
   EFI_HANDLE  Handle;
 
   //
-  // The bootloader does not always end the initrd on a sector boundary: the
-  // nubia NX769J hands over an end address whose low bits are 0x430. Round the
-  // published length up instead of refusing the ramdisk; the bytes between the
-  // real end and the rounded end are inside the RAM the bootloader reserved for
-  // the initrd, and the volume is read-only.
+  // The loader does not always end the initrd on a sector boundary: the nubia
+  // NX769J hands over an end address whose low bits are 0x430. Round the
+  // published length up instead of refusing the ramdisk; the volume is
+  // read-only, and the extra bytes stay inside the RAM reserved for it.
   //
   if (((End - Start) % RAM_BLOCK_SIZE) != 0) {
     UINT64  Rounded = ((End - Start) + RAM_BLOCK_SIZE - 1) / RAM_BLOCK_SIZE * RAM_BLOCK_SIZE;
-    DEBUG ((DEBUG_WARN, "UNIXNURAMDISK: initrd 0x%lx-0x%lx rounded to 0x%lx bytes\n", Start, End, Rounded));
+    DEBUG ((DEBUG_WARN, "UNIXNURAMDISK: 0x%lx-0x%lx rounded to 0x%lx bytes\n", Start, End, Rounded));
     End = Start + Rounded;
   }
 
@@ -254,7 +231,7 @@ PublishRange (
                   &mBlockIo,
                   NULL
                   );
-  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: initrd block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
+  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
 }
 
 STATIC
@@ -273,7 +250,6 @@ PublishInitrd (
 
   Chosen = FdtPathOffset (Fdt, "/chosen");
   if (Chosen < 0) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no /chosen\n"));
     return FALSE;
   }
 
@@ -282,71 +258,19 @@ PublishInitrd (
   if ((StartProp == NULL) || (EndProp == NULL) ||
       ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
   {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no initrd in /chosen\n"));
     return FALSE;
   }
 
   Start = ReadCells (StartProp, StartLength / 4);
   End   = ReadCells (EndProp, EndLength / 4);
   if (End <= Start) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: empty initrd 0x%lx-0x%lx\n", Start, End));
     return FALSE;
   }
 
-  SetMarker (2, FB_WHITE);
+  PublishStatus (L"UNIXNURAMDISK: payload from /chosen");
   PublishRange (Start, End);
   return TRUE;
 }
-
-/**
-  Size a FAT volume sitting at Base from its own boot sector.
-
-  @param[in]  Base  Candidate volume.
-  @param[out] Size  Length in bytes taken from the BPB.
-
-  @retval TRUE   A boot sector with a sane geometry is there.
-  @retval FALSE  Nothing usable.
-**/
-STATIC
-BOOLEAN
-FatVolumeSize (
-  IN  UINT64  Base,
-  OUT UINT64  *Size
-  )
-{
-  CONST UINT8  *Sector = (CONST UINT8 *)(UINTN)Base;
-  UINT16       BytesPerSector;
-  UINT16       Total16;
-  UINT32       Total32;
-  UINT8        SectorsPerCluster;
-  UINT64       Total;
-
-  if ((Sector[510] != 0x55) || (Sector[511] != 0xAA)) {
-    return FALSE;
-  }
-
-  BytesPerSector    = ReadUnaligned16 ((CONST UINT16 *)(Sector + 11));
-  SectorsPerCluster = Sector[13];
-  Total16           = ReadUnaligned16 ((CONST UINT16 *)(Sector + 19));
-  Total32           = ReadUnaligned32 ((CONST UINT32 *)(Sector + 32));
-
-  if ((BytesPerSector != RAM_BLOCK_SIZE) ||
-      ((SectorsPerCluster != 1) && (SectorsPerCluster != 2) &&
-       (SectorsPerCluster != 4) && (SectorsPerCluster != 8) &&
-       (SectorsPerCluster != 16) && (SectorsPerCluster != 32)))
-  {
-    return FALSE;
-  }
-
-  Total = (Total16 != 0) ? Total16 : Total32;
-  if ((Total == 0) || (Total * RAM_BLOCK_SIZE > RAMDISK_FALLBACK_MAX)) {
-    return FALSE;
-  }
-
-  *Size = Total * RAM_BLOCK_SIZE;
-  return TRUE;
-}
-
 
 //
 // The payload volume embedded in the firmware volume (see myron.fdf). This is
@@ -377,12 +301,12 @@ PublishPayloadVolume (
   Status = GetSectionFromAnyFv (&mPayloadVolumeGuid, EFI_SECTION_RAW, 0, &Data, &Size);
   if (EFI_ERROR (Status) || (Data == NULL) || (Size == 0)) {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no payload volume in the FV: %r\n", Status));
-    SetMarker (1, FB_RED);
+    PublishStatus (L"UNIXNURAMDISK: payload not in the FV");
     return FALSE;
   }
 
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: payload volume at 0x%lx, %lu bytes\n", (UINT64)(UINTN)Data, (UINT64)Size));
-  SetMarker (1, FB_WHITE);
+  PublishStatus (L"UNIXNURAMDISK: payload from the FV");
   PublishRange ((UINT64)(UINTN)Data, (UINT64)(UINTN)Data + Size);
   return TRUE;
 }
@@ -451,6 +375,7 @@ UniXNURamDiskDxeEntry (
     }
   }
 
+  PublishStatus (L"UNIXNURAMDISK: no payload anywhere");
   PublishFallback ();
   return EFI_SUCCESS;
 }
