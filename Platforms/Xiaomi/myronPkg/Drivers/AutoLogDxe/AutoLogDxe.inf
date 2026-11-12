@@ -20,12 +20,15 @@
   BaseLib
   BaseMemoryLib
   DebugLib
+  DevicePathLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
 
 [Protocols]
   gEfiGraphicsOutputProtocolGuid   ## CONSUMES
   gEfiSimpleFileSystemProtocolGuid ## CONSUMES
+  gEfiBlockIoProtocolGuid          ## CONSUMES
+  gEfiDevicePathProtocolGuid       ## CONSUMES
   gUniXNUMenuPluginProtocolGuid    ## CONSUMES
 
 [Depex]
