@@ -21,6 +21,7 @@
   BaseMemoryLib
   DebugLib
   DevicePathLib
+  MemoryAllocationLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
 
