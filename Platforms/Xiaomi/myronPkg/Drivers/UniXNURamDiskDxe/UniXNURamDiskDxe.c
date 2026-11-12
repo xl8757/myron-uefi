@@ -173,7 +173,7 @@ DrawMarkers (
 {
   EFI_STATUS                    Status;
   EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
-  EFI_GRAPHICS_OUTPUT_MODE      *Mode;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE  *Mode;
   UINT32                        *Row;
   UINTN                         Index;
   UINTN                         X;
@@ -240,7 +240,6 @@ PublishStatus (
 {
   EFI_EVENT  Event;
   UINTN      Index;
-  UINTN      Src;
 
   Index = 0;
   while ((Index < 70) && (Text[Index] != L'\0')) {
