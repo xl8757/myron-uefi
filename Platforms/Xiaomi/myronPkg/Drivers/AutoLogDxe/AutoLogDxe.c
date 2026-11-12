@@ -24,36 +24,148 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/UniXNUMenuPlugin.h>
+#include <Library/AdvancedLoggerAccessLib.h>
 #include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #define AUTOLOG_TICK_2S       20000000ULL
 
 //
-// Timing, measured from the last complete firmware log:
-//   this driver is dispatched at ~25.5 s after power on,
-//   the UniXNU menu appears at ~29.5 s,
-//   the payload config sets a 10 s countdown, so the default boot entry is
-//   attempted at ~39.5 s and its result is already in the log.
+// Trigger policy: do not guess how long the menu countdown takes.
 //
-// 12 ticks x 2 s = 24 s after dispatch -> QR frames start at ~49.5 s, i.e.
-// "fifty seconds". Starting the viewer earlier would block the menu countdown
-// (Run() is called synchronously from a timer callback and only exits on a key
-// press, which this board cannot produce), and the boot attempt would never be
-// logged. Waiting until after it means one boot captures the whole story.
+// The last log showed "menu: ... timeout 30000 ms" even though the packed
+// config says 10 s, and the QR viewer started at ~49.7 s with the countdown
+// frozen at "Booting Hello payload in 10 s". Run() is called synchronously
+// from a timer callback, so once the viewer owns the panel the menu never
+// gets to boot its default entry and the log has no LoadImage result.
 //
-#define AUTOLOG_DELAY_TICKS   12
+// Instead, wait until the official Advanced Logger actually contains a line
+// from UniXNUBootEntry ("boot: ...") or Main.c ("returned ..."), which proves
+// the boot attempt is over. AUTOLOG_MIN_TICKS keeps the requested ~50 s
+// (driver dispatched at ~25.5 s, 12 x 2 s = ~49.5 s); AUTOLOG_MAX_TICKS is
+// a hard ceiling so the QR export is never skipped entirely.
+//
+#define AUTOLOG_MIN_TICKS     12
+#define AUTOLOG_MAX_TICKS     20
 
-//
-// The official viewer's event loop only exits on a key press. This board has
-// no ConIn, so it rotates frames indefinitely -- which is exactly what we
-// want for scanning, now that the menu has already had its turn.
-//
 #define AUTOLOG_ENABLE_QR_VIEWER  1
 
 STATIC BOOLEAN  mStarted = FALSE;
 STATIC UINTN    mTicks   = 0;
+
+//
+// Has UniXNU already attempted to boot the default entry? Read the official
+// Advanced Logger buffer through the same access library the QR viewer uses.
+// Both a successful LoadImage and a failure emit a "boot: ..." line; Main.c
+// additionally logs "menu: entry N returned ...". Either one means the menu
+// countdown is over and it is safe to take the panel.
+//
+STATIC
+BOOLEAN
+BootAttemptLogged (
+  VOID
+  )
+{
+  ADVANCED_LOGGER_ACCESS_MESSAGE_LINE_ENTRY  Line;
+  EFI_STATUS                                 Status;
+  BOOLEAN                                    Found;
+
+  Found = FALSE;
+  ZeroMem (&Line, sizeof (Line));
+  for ( ; ;) {
+    Status = AdvancedLoggerAccessLibGetNextFormattedLine (&Line);
+    if ((Status == EFI_END_OF_FILE) || EFI_ERROR (Status) ||
+        (Line.MessageLen == 0) || (Line.Message == NULL))
+    {
+      break;
+    }
+
+    if ((AsciiStrStr (Line.Message, "boot: ") != NULL) ||
+        (AsciiStrStr (Line.Message, "returned ") != NULL))
+    {
+      Found = TRUE;
+      break;
+    }
+  }
+
+  AdvancedLoggerAccessLibReset (&Line);
+  return Found;
+}
+
+//
+// Dump the config as the running firmware actually reads it. The last log
+// reported a 30 s countdown while the packed file says 10 s; this settles
+// which copy the menu opened without another round of speculation.
+//
+STATIC
+VOID
+ReportConfig (
+  VOID
+  )
+{
+  EFI_STATUS                       Status;
+  EFI_HANDLE                       *Handles;
+  UINTN                            Count;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *Fs;
+  EFI_FILE_PROTOCOL                *Root;
+  EFI_FILE_PROTOCOL                *File;
+  CHAR8                            Buffer[512];
+  UINTN                            Size;
+  UINTN                            Index;
+
+  Handles = NULL;
+  Count   = 0;
+  Status  = gBS->LocateHandleBuffer (
+                   ByProtocol,
+                   &gEfiSimpleFileSystemProtocolGuid,
+                   NULL,
+                   &Count,
+                   &Handles
+                   );
+  if (EFI_ERROR (Status) || (Count == 0) || (Handles == NULL)) {
+    DEBUG ((DEBUG_ERROR, "AUTOLOG: cannot dump config, no volume (%r)\n", Status));
+    return;
+  }
+
+  Status = gBS->HandleProtocol (Handles[0], &gEfiSimpleFileSystemProtocolGuid, (VOID **)&Fs);
+  gBS->FreePool (Handles);
+  if (EFI_ERROR (Status) || (Fs == NULL)) {
+    return;
+  }
+
+  Status = Fs->OpenVolume (Fs, &Root);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  Status = Root->Open (Root, &File, L"\\EFI\\UniXNU\\unixnu.tom", EFI_FILE_MODE_READ, 0);
+  if (EFI_ERROR (Status)) {
+    Root->Close (Root);
+    DEBUG ((DEBUG_ERROR, "AUTOLOG: config open %r\n", Status));
+    return;
+  }
+
+  ZeroMem (Buffer, sizeof (Buffer));
+  Size   = sizeof (Buffer) - 1;
+  Status = File->Read (File, &Size, Buffer);
+  File->Close (File);
+  Root->Close (Root);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "AUTOLOG: config read %r\n", Status));
+    return;
+  }
+
+  Buffer[Size] = '\0';
+  for (Index = 0; Index < Size; Index++) {
+    if ((Buffer[Index] == '\n') || (Buffer[Index] == '\r')) {
+      Buffer[Index] = '|';
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "AUTOLOG: runtime unixnu.tom = %a\n", Buffer));
+}
 
 //
 // One-shot snapshot of the file-system view, printed into the official Advanced
@@ -139,7 +251,11 @@ AutoLogTick (
     return;
   }
 
-  if (++mTicks < AUTOLOG_DELAY_TICKS) {
+  if (++mTicks < AUTOLOG_MIN_TICKS) {
+    return;
+  }
+
+  if ((mTicks < AUTOLOG_MAX_TICKS) && !BootAttemptLogged ()) {
     return;
   }
 
@@ -182,7 +298,10 @@ AutoLogTick (
   // One-shot, non-blocking volume snapshot. It returns immediately, so the
   // menu keeps ownership of the screen and its countdown can finish.
   //
+  DEBUG ((DEBUG_ERROR, "AUTOLOG: trigger at tick %u (boot attempt %a)\n",
+          (UINT32)mTicks, BootAttemptLogged () ? "seen" : "ceiling"));
   ReportVolumes ();
+  ReportConfig ();
 
 #if AUTOLOG_ENABLE_QR_VIEWER
   Side = MIN (Gop->Mode->Info->HorizontalResolution, Gop->Mode->Info->VerticalResolution);

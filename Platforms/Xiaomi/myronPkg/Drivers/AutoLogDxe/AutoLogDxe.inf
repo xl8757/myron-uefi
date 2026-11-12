@@ -15,7 +15,9 @@
   UniXNUPkg/UniXNUPkg.dec
 
 [LibraryClasses]
+  AdvancedLoggerAccessLib
   BaseLib
+  BaseMemoryLib
   DebugLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
