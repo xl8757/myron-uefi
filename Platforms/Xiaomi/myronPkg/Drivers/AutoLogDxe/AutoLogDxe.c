@@ -43,8 +43,8 @@
 // gets to boot its default entry and the log has no LoadImage result.
 //
 // Instead, wait until the official Advanced Logger actually contains a line
-// from UniXNUBootEntry ("boot: ...") or Main.c ("returned ..."), which proves
-// the boot attempt is over. AUTOLOG_MIN_TICKS keeps the requested ~50 s
+// from UniXNUBootEntry/Main.c ("... returned ..."), which proves the boot
+// attempt is over. AUTOLOG_MIN_TICKS keeps the requested ~50 s
 // (driver dispatched at ~25.5 s, 12 x 2 s = ~49.5 s); AUTOLOG_MAX_TICKS is
 // a hard ceiling so the QR export is never skipped entirely.
 //
@@ -83,8 +83,10 @@ BootAttemptLogged (
       break;
     }
 
-    if ((AsciiStrStr (Line.Message, "boot: ") != NULL) ||
-        (AsciiStrStr (Line.Message, "returned ") != NULL))
+    // "boot: starting" is emitted before StartImage, so matching "boot: "
+    // would take the panel while HelloPayload is still on screen. Wait for a
+    // "returned" line: only then is the attempt really over.
+    if (AsciiStrStr (Line.Message, "returned ") != NULL)
     {
       Found = TRUE;
       break;

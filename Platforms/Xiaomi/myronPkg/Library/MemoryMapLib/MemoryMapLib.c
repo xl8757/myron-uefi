@@ -57,9 +57,10 @@ gMemoryDescriptor[] = {
   {"Display_Reserved", 0xFC800000, 0x02B00000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},
 
   // UEFI and XNU allocations carved only from gaps in the live memory map.
-  // 装载器把 payload 卷放在这里（boot.img 头的 ramdisk_addr）。0x01000000
-  // 那个经典地址落在本平台没有映射的洞里，读它会直接取指异常。
-  {"Initrd",             0xA6F00000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+  // 0x01000000 那个经典 ramdisk 地址落在本平台没映射的洞里，读它会取指异常。
+  // 0xA6F00000 这 1 MiB 是最初的小卷通道，现在只作为驱动找不到大卷时的
+  // 兜底地址；真正的大 ramdisk 放在下面 XNU_Payload 预留区的基址。
+  {"Initrd_Small",       0xA6F00000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"FD_Reserved",        0xA7000000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"UEFI_FD",            0xA7100000, 0x00300000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"UEFI_FD_Reserved",   0xA7400000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
@@ -72,7 +73,11 @@ gMemoryDescriptor[] = {
   {"FV_Region",          0xA7AD9000, 0x00400000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},
   {"UEFI_RESV",          0xA7ED9000, 0x00127000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},
   {"Kernel",             0xA8000000, 0x10000000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
-  // BootShim copies XNUP here; the range ends exactly where TRUST_UI_VM_REGION begins.
+  // BootShim copies XNUP here; the range ends exactly where TRUST_UI_VM_REGION
+  // begins. The 48 MiB boot ramdisk is loaded at the base of this window:
+  // 0xA6F00000 only had 1 MiB described and the 3 MiB FD cannot hold a kernel.
+  // This range is already AddMem/WRITE_BACK_XN, so the DXE ramdisk driver can
+  // read it directly; it stays Reserv so nothing else allocates over it.
   {"XNU_Payload",        0xF0000000, 0x03800000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   // 0xB8000000..0xC3DD0000 is the verified free gap below HYPERVISOR_EXTENDED_REGION.
   {"DXE_Heap",           0xB8000000, 0x0BDD0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK_XN},

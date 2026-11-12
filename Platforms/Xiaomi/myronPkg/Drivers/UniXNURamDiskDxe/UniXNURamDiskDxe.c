@@ -133,11 +133,13 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 //
 // Where the boot image asks ABL to place the ramdisk. The classic 0x01000000
 // sits outside the DRAM this platform maps, so a device published over it would
-// fault on the first read; this address is just below FD_Reserved, inside the
-// window the memory map already describes.
+// fault on the first read. The small 1 MiB Initrd window at 0xA6F00000 worked
+// for the test volume but cannot hold a real XNU payload; the memory map
+// already reserves XNU_Payload = 0xF0000000, 0x03800000 (56 MiB) for exactly
+// this purpose, so point the ramdisk there and allow up to 64 MiB from the BPB.
 //
-#define RAMDISK_FALLBACK_BASE  0xA6F00000
-#define RAMDISK_FALLBACK_MAX   0x01000000
+#define RAMDISK_FALLBACK_BASE  0xF0000000
+#define RAMDISK_FALLBACK_MAX   0x04000000
 
 //
 // Diagnostics for a board with no readable output channel. Everything printed
@@ -449,7 +451,7 @@ FatVolumeSize (
   it is, so nothing else is needed.
 **/
 STATIC
-VOID
+BOOLEAN
 PublishFallback (
   VOID
   )
@@ -457,13 +459,16 @@ PublishFallback (
   UINT64  Size;
 
   if (!FatVolumeSize (RAMDISK_FALLBACK_BASE, &Size)) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: nothing at 0x%lx either\n", (UINT64)RAMDISK_FALLBACK_BASE));
-    return;
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no ramdisk volume at 0x%lx\n",
+            (UINT64)RAMDISK_FALLBACK_BASE));
+    return FALSE;
   }
 
-  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: ramdisk at 0x%lx, %lu bytes from its BPB\n",
+  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: XNU_Payload ramdisk at 0x%lx, %lu bytes from its BPB\n",
           (UINT64)RAMDISK_FALLBACK_BASE, Size));
+  PublishStatus (2, MARKER_WHITE, L"UNIXNURAMDISK: payload from XNU_Payload ramdisk");
   PublishRange (RAMDISK_FALLBACK_BASE, RAMDISK_FALLBACK_BASE + Size);
+  return TRUE;
 }
 
 EFI_STATUS
@@ -477,11 +482,18 @@ UniXNURamDiskDxeEntry (
   UINT64             Dtb;
 
   //
-  // The firmware volume copy does not depend on anything the loader did, so it
-  // is tried first. It used to sit behind an early return for a missing or
-  // unparsable device tree, which meant a payload that was present in the
-  // firmware volume was never looked at.
+  // Try the large ramdisk in the XNU_Payload reservation first. It is the only
+  // channel that can hold a real XNU payload (kernel + trust cache + ADT);
+  // the 3 MiB FD cannot. If ABL declined to place it there, fall back to the
+  // small firmware-volume copy so the menu and the QR log channel still work
+  // and one boot tells us which path the board actually supports.
   //
+  if (PublishFallback ()) {
+    return EFI_SUCCESS;
+  }
+
+  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: falling back to the firmware volume copy\n"));
+
   Dtb = 0;
   Hob = GetFirstGuidHob (&mEntryArgHobGuid);
   if ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) >= sizeof (UINT64))) {
@@ -505,6 +517,5 @@ UniXNURamDiskDxeEntry (
   }
 
   PublishStatus (3, MARKER_RED, L"UNIXNURAMDISK: no payload anywhere");
-  PublishFallback ();
   return EFI_SUCCESS;
 }

@@ -1,0 +1,20 @@
+# 48 MiB ramdisk 卷（XNU_Payload 预留区 0xF0000000）。
+# 与小卷内容刻意不同，日志里的 runtime unixnu.toml 能证明设备用的是哪个卷。
+# 文件名全部用 8.3（卷里没有长文件名条目），FAT 不区分大小写。
+version = 1
+
+[boot]
+timeout = 10
+default = "hello"
+rotate = 3
+
+[ui]
+title = "UniXNU 48M"
+
+[[entry]]
+id = "hello"
+title = "Hello payload (48M)"
+type = "efi"
+args = "pause"
+# 绝对路径：Config.c 的 MakePath() 会给相对路径加上 \EFI\UniXNU 前缀。
+path = "/PAYLOADS/HELLO.EFI"

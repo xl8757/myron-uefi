@@ -234,6 +234,14 @@ jobs:
             --size-kib 1024 \
             --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu.toml" \
             --add "PAYLOADS/HELLO.EFI=$efi"
+          # 48 MiB 大卷走 XNU_Payload 预留区（0xF0000000）。FAT12 每簇 32 扇区
+          # 才能把簇数压在 4084 以内；小卷仍留在 FD 里作兜底，大卷地址由
+          # repack 写进 boot.img 头。配置刻意不同（title / args=pause），日志
+          # 里的 runtime unixnu.toml 能直接证明设备用的是哪一个。
+          python3 tools/make_payload.py fat --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.img \
+            --size-kib 49152 --cluster-sectors 32 \
+            --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu-big.toml" \
+            --add "PAYLOADS/HELLO.EFI=$efi"
           cd Mu-Silicium
           source ../venv/bin/activate
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
@@ -249,15 +257,14 @@ jobs:
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
             --img Mu-Silicium/myron-boot.img --fd "$fd"
 
-      # 官方负载发现顺序（unixnu.com porting/uefi-firmware#payload-discovery）第一条
-      # 就是 ramdisk_bytes > 0。同一台机器的社区记录（xwsjjctz/UniXNU-NX769J 的
-      # DEVICE-EVIDENCE）也实测：boot ramdisk 走默认 0x01000000 到不了菜单，但把
-      # ramdisk_addr 挪进已描述的内存（这里 0xA6F00000，见 MemoryMapLib 的 Initrd
-      # 描述符）后 /chosen 与固定地址两条路都能接上。repack 同时改长度和地址。
+      # 大卷作为 ramdisk 交给 ABL，地址写进 header 的 ramdisk_addr。
+      # 内存映射里 XNU_Payload = 0xF0000000 / 56 MiB 已描述且为 Reserv，
+      # 驱动按该地址读 BPB 就能找到卷；若 ABL 不配合，FD 内的小卷会兜底。
       - name: repack boot image with the payload ramdisk
         run: |
           python3 tools/make_payload.py repack --boot Mu-Silicium/myron-boot.img \
-            --ramdisk Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload.img \
+            --ramdisk Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.img \
+            --ramdisk-addr 0xF0000000 \
             --out Mu-Silicium/myron-boot.img
           ls -l Mu-Silicium/myron-boot.img
           fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
