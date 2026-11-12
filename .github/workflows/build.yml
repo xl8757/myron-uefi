@@ -264,19 +264,9 @@ jobs:
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
             --img Mu-Silicium/myron-boot.img --fd "$fd"
 
-      # 大卷作为 ramdisk 交给 ABL，地址写进 header 的 ramdisk_addr。
-      # 内存映射里 XNU_Payload = 0xF0000000 / 56 MiB 已描述且为 Reserv，
-      # 驱动按该地址读 BPB 就能找到卷；若 ABL 不配合，FD 内的小卷会兜底。
-      - name: repack boot image with the payload ramdisk
-        run: |
-          python3 tools/make_payload.py repack --boot Mu-Silicium/myron-boot.img \
-            --ramdisk Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.img \
-            --ramdisk-addr 0xF0000000 \
-            --out Mu-Silicium/myron-boot.img
-          ls -l Mu-Silicium/myron-boot.img
-          fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
-          python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
-            --img Mu-Silicium/myron-boot.img --fd "$fd"
+      # boot ramdisk 已被设备日志证伪：ABL 在 fastboot boot 时只搬 kernel 段
+      # （x0=0、无 DTB），48 MiB ramdisk 从没被用过。大卷改由 FD 内的稀疏
+      # 副本在 DXE 阶段还原，所以这里不再 repack，boot.img 保持构建产物原样。
 
       - uses: actions/upload-artifact@v4
         with:

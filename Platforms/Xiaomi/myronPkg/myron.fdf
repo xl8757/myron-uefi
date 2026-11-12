@@ -124,8 +124,6 @@ READ_LOCK_STATUS   = TRUE
 
   INF DarwinBootPkg/Driver/DarwinBoot.inf
 
-  # 路标驱动（屏幕色带），用于定位复位点
-
   # IORT DT
   INF QcomPkg/Drivers/IortDtDxe/IortDtDxe.inf
 

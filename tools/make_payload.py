@@ -10,11 +10,6 @@ Two jobs, both done without external tools:
           clusters is read with 12-bit entries by any conforming driver and
           fails to mount.
 
-  repack  rewrite an Android boot image (header v0) with that volume as its
-          ramdisk. build_uefi.py packs whatever sits in Resources/ramdisk, but
-          the payload it should carry is produced by that same run, so the
-          image is rebuilt afterwards instead of racing the build.
-
   sparse  pack a large FAT volume for embedding in the FD. The tail of such a
           volume is entirely zero, so store only the used prefix plus a 12-byte
           header; DXE clears the XNU_Payload window and copies the prefix back.
@@ -203,73 +198,6 @@ def build_fat(files: dict, total_sectors: int, cluster_sectors: int = 1) -> byte
     return fs.finalize()
 
 
-def repack(boot: Path, ramdisk: Path, out: Path, ramdisk_addr: int = 0xA6F00000) -> None:
-    data = boot.read_bytes()
-    if data[:8] != b"ANDROID!":
-        raise SystemExit("不是 Android 启动镜像")
-    kernel_size, _ka, old_rd, _ra = struct.unpack_from("<4I", data, 8)
-    second_size = struct.unpack_from("<I", data, 24)[0]
-    page = struct.unpack_from("<I", data, 36)[0]
-    if struct.unpack_from("<I", data, 1640)[0] != 0:
-        raise SystemExit("只处理 header v0")
-
-    header = bytearray(data[:page])
-    kernel = data[page:page + kernel_size]
-    ramdisk_blob = ramdisk.read_bytes()
-    rd_off = page + ((kernel_size + page - 1) // page) * page
-    second = data[rd_off + ((old_rd + page - 1) // page) * page:
-                  rd_off + ((old_rd + page - 1) // page) * page + second_size]
-
-    struct.pack_into("<I", header, 16, len(ramdisk_blob))
-    # 0x01000000 在本平台未映射，固件读不到。默认放到 Initrd 描述符
-    # 覆盖的地址；放大 payload 时改用 XNU_Payload 预留区 0xF0000000。
-    struct.pack_into("<I", header, 20, ramdisk_addr)
-    blob = bytearray(header)
-    for part in (kernel, ramdisk_blob, second):
-        blob += part
-        blob += b"\0" * ((-len(part)) % page)
-    out.write_bytes(bytes(blob))
-    print("boot.img 重打包: kernel %d + ramdisk %d + second %d -> %d 字节"
-          % (len(kernel), len(ramdisk_blob), len(second), len(blob)))
-
-
-def repack_fd(boot: Path, fd: Path, out: Path) -> None:
-    """Swap the FD inside gzip(BootShim + FD) and keep the appended DTB."""
-    data = boot.read_bytes()
-    if data[:8] != b"ANDROID!":
-        raise SystemExit("不是 Android 启动镜像")
-    ks, _ka, rs, _ra, ss, _sa, _ta, page = struct.unpack_from("<8I", data, 8)
-    kernel = data[page:page + ks]
-
-    engine = zlib.decompressobj(31)
-    body = engine.decompress(kernel) + engine.flush()
-    trailing = engine.unused_data
-    sig = body.find(b"_FVH")
-    if sig < 40:
-        raise SystemExit("kernel 载荷里找不到固件卷头")
-    fd_off = sig - 40
-
-    new_fd = fd.read_bytes()
-    if len(new_fd) != 0x300000:
-        raise SystemExit("FD 必须是 0x300000 字节，实得 %d" % len(new_fd))
-    new_kernel = gzip.compress(body[:fd_off] + new_fd, compresslevel=6, mtime=0) + trailing
-
-    rd_off = page + ((ks + page - 1) // page) * page
-    second_off = rd_off + ((rs + page - 1) // page) * page
-    ramdisk = data[rd_off:rd_off + rs]
-    second = data[second_off:second_off + ss]
-
-    header = bytearray(data[:page])
-    struct.pack_into("<I", header, 8, len(new_kernel))
-    blob = bytearray(header)
-    for part in (new_kernel, ramdisk, second):
-        blob += part
-        blob += b"\0" * ((-len(part)) % page)
-    out.write_bytes(bytes(blob))
-    print("boot.img 内嵌 FD 已替换: kernel %d -> %d 字节, shim %d 字节"
-          % (ks, len(new_kernel), fd_off))
-
-
 def make_sparse(out: Path, src: Path | None, total: int, placeholder: bool) -> None:
     """UXSP magic + total length + used length + used prefix of the volume."""
     if placeholder:
@@ -304,12 +232,6 @@ def main() -> int:
     f.add_argument("--cluster-sectors", type=int, default=1,
                    help="每簇扇区数，放大卷时用它把簇数压在 FAT12 上限内")
 
-    r = sub.add_parser("repack", help="把 ramdisk 换进 boot.img")
-    r.add_argument("--boot", type=Path, required=True)
-    r.add_argument("--ramdisk", type=Path, required=True)
-    r.add_argument("--out", type=Path, required=True)
-    r.add_argument("--ramdisk-addr", type=lambda x: int(x, 0), default=0xA6F00000)
-
     s = sub.add_parser("sparse", help="把大 FAT 卷压成稀疏镜像")
     s.add_argument("--out", type=Path, required=True)
     s.add_argument("--in", dest="src", type=Path, default=None)
@@ -335,8 +257,6 @@ def main() -> int:
         print("FAT12 镜像 %s: %d 字节" % (a.out, len(image)))
         for name in sorted(files):
             print("   %-28s %d 字节" % (name, len(files[name])))
-    elif a.cmd == "repack":
-        repack(a.boot, a.ramdisk, a.out, a.ramdisk_addr)
     elif a.cmd == "sparse":
         make_sparse(a.out, a.src, a.total, a.placeholder)
     else:
