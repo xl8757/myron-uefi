@@ -346,29 +346,34 @@ UniXNURamDiskDxeEntry (
   EFI_HOB_GUID_TYPE  *Hob;
   UINT64             Dtb;
 
+  //
+  // The firmware volume copy does not depend on anything the loader did, so it
+  // is tried first. It used to sit behind an early return for a missing or
+  // unparsable device tree, which meant a payload that was present in the
+  // firmware volume was never looked at.
+  //
+  Dtb = 0;
   Hob = GetFirstGuidHob (&mEntryArgHobGuid);
-  if (Hob == NULL) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no entry argument HOB\n"));
-    return EFI_SUCCESS;
+  if ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) >= sizeof (UINT64))) {
+    Dtb = ReadUnaligned64 ((CONST UINT64 *)GET_GUID_HOB_DATA (Hob));
   }
 
-  if (GET_GUID_HOB_DATA_SIZE (Hob) < sizeof (UINT64)) {
-    return EFI_COMPROMISED_DATA;
-  }
+  if ((Dtb != 0) && ((Dtb & 3) == 0) && (FdtCheckHeader ((VOID *)(UINTN)Dtb) == 0)) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
+    if (PublishPayloadVolume ()) {
+      return EFI_SUCCESS;
+    }
 
-  Dtb = ReadUnaligned64 ((CONST UINT64 *)GET_GUID_HOB_DATA (Hob));
-  if ((Dtb == 0) || ((Dtb & 3) != 0) || (FdtCheckHeader ((VOID *)(UINTN)Dtb) != 0)) {
+    if (PublishInitrd ((VOID *)(UINTN)Dtb)) {
+      return EFI_SUCCESS;
+    }
+  } else {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: x0 0x%lx is not a device tree\n", Dtb));
-    return EFI_SUCCESS;
+    if (PublishPayloadVolume ()) {
+      return EFI_SUCCESS;
+    }
   }
 
-  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
-
-  if (!PublishInitrd ((VOID *)(UINTN)Dtb) &&
-      !PublishPayloadVolume ())
-  {
-    PublishFallback ();
-  }
-
+  PublishFallback ();
   return EFI_SUCCESS;
 }
