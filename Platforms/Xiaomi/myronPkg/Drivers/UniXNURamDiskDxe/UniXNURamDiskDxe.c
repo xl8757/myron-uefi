@@ -7,6 +7,7 @@
 #include <Uefi.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/DxeServicesLib.h>
 #include <Library/DebugLib.h>
 #include <Library/FdtLib.h>
 #include <Library/HobLib.h>
@@ -272,6 +273,43 @@ FatVolumeSize (
   return TRUE;
 }
 
+//
+// The payload volume embedded in the firmware volume (see myron.fdf). This is
+// the path that does not depend on the loader at all.
+//
+STATIC CONST EFI_GUID  mPayloadVolumeGuid = {
+  0xA1B2C3D4, 0x5E6F, 0x4A7B, { 0x8C, 0x9D, 0x0E, 0x1F, 0x2A, 0x3B, 0x4C, 0x5D }
+};
+
+/**
+  Publish the payload volume carried by the firmware volume.
+
+  @retval TRUE   A volume was found and published.
+  @retval FALSE  No such section in any firmware volume.
+**/
+STATIC
+BOOLEAN
+PublishPayloadVolume (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *Data;
+  UINTN       Size;
+
+  Data   = NULL;
+  Size   = 0;
+  Status = GetSectionFromAnyFv (&mPayloadVolumeGuid, EFI_SECTION_RAW, 0, &Data, &Size);
+  if (EFI_ERROR (Status) || (Data == NULL) || (Size == 0)) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no payload volume in the FV: %r\n", Status));
+    return FALSE;
+  }
+
+  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: payload volume at 0x%lx, %lu bytes\n", (UINT64)(UINTN)Data, (UINT64)Size));
+  PublishRange ((UINT64)(UINTN)Data, (UINT64)(UINTN)Data + Size);
+  return TRUE;
+}
+
 /**
   Publish the ramdisk at the address the boot image asks ABL to load it to.
 
@@ -326,7 +364,9 @@ UniXNURamDiskDxeEntry (
 
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
 
-  if (!PublishInitrd ((VOID *)(UINTN)Dtb)) {
+  if (!PublishInitrd ((VOID *)(UINTN)Dtb) &&
+      !PublishPayloadVolume ())
+  {
     PublishFallback ();
   }
 

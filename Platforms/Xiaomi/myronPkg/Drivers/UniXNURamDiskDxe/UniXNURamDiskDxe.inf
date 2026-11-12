@@ -13,6 +13,7 @@
   MdePkg/MdePkg.dec
 
 [LibraryClasses]
+  DxeServicesLib
   BaseLib
   BaseMemoryLib
   DebugLib

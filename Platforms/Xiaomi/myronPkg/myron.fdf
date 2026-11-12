@@ -146,4 +146,12 @@ READ_LOCK_STATUS   = TRUE
     }
   }
 
+  # payload 卷：UniXNU 从文件系统卷里读 /EFI/UniXNU/unixnu.toml，而内存启动
+  # 时装载器把它放到哪儿不由我们决定。放在固件卷里就没有这个问题，驱动直接用
+  # GetSectionFromAnyFv 取。内容由 CI 生成（tools/make_payload.py）。
+  FILE FREEFORM = A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D {
+    SECTION RAW = myronPkg/Payload/payload.img
+    SECTION UI = "PayloadVolume"
+  }
+
   !include SiliciumPkg/Common.fdf.inc
