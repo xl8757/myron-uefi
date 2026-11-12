@@ -312,6 +312,55 @@ PublishPayloadVolume (
 }
 
 /**
+  Size a FAT volume sitting at Base from its own boot sector.
+
+  @param[in]  Base  Candidate volume.
+  @param[out] Size  Length in bytes taken from the BPB.
+
+  @retval TRUE   A boot sector with a sane geometry is there.
+  @retval FALSE  Nothing usable.
+**/
+STATIC
+BOOLEAN
+FatVolumeSize (
+  IN  UINT64  Base,
+  OUT UINT64  *Size
+  )
+{
+  CONST UINT8  *Sector = (CONST UINT8 *)(UINTN)Base;
+  UINT16       BytesPerSector;
+  UINT16       Total16;
+  UINT32       Total32;
+  UINT8        SectorsPerCluster;
+  UINT64       Total;
+
+  if ((Sector[510] != 0x55) || (Sector[511] != 0xAA)) {
+    return FALSE;
+  }
+
+  BytesPerSector    = ReadUnaligned16 ((CONST UINT16 *)(Sector + 11));
+  SectorsPerCluster = Sector[13];
+  Total16           = ReadUnaligned16 ((CONST UINT16 *)(Sector + 19));
+  Total32           = ReadUnaligned32 ((CONST UINT32 *)(Sector + 32));
+
+  if ((BytesPerSector != RAM_BLOCK_SIZE) ||
+      ((SectorsPerCluster != 1) && (SectorsPerCluster != 2) &&
+       (SectorsPerCluster != 4) && (SectorsPerCluster != 8) &&
+       (SectorsPerCluster != 16) && (SectorsPerCluster != 32)))
+  {
+    return FALSE;
+  }
+
+  Total = (Total16 != 0) ? Total16 : Total32;
+  if ((Total == 0) || (Total * RAM_BLOCK_SIZE > RAMDISK_FALLBACK_MAX)) {
+    return FALSE;
+  }
+
+  *Size = Total * RAM_BLOCK_SIZE;
+  return TRUE;
+}
+
+/**
   Publish the ramdisk at the address the boot image asks ABL to load it to.
 
   ABL only writes linux,initrd-start/end into /chosen when it recognises the
