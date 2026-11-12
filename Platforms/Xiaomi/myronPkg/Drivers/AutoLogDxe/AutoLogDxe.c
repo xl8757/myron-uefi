@@ -21,6 +21,7 @@
 **/
 
 #include <Uefi.h>
+#include <Protocol/AdvancedLogger.h>
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/UniXNUMenuPlugin.h>
