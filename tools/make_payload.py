@@ -15,14 +15,22 @@ Two jobs, both done without external tools:
           the payload it should carry is produced by that same run, so the
           image is rebuilt afterwards instead of racing the build.
 
+  refd    replace the firmware volume embedded in the boot image's gzip kernel.
+          The workflow builds twice: the first build emits myron-boot.img, the
+          second (after the payload volume exists) only regenerates the FV.
+          Without this step the image keeps the first build's stale FD, so any
+          change to the payload volume never reaches the device.
+
 Names are kept to 8.3 on purpose: no long-file-name entries means no chance of
 getting the checksum wrong, and FAT is case-insensitive, so UNIXNU.TOM still
 answers to unixnu.toml.
 """
 
 import argparse
+import gzip
 import struct
 import sys
+import zlib
 from pathlib import Path
 
 SECTOR = 512
@@ -219,6 +227,43 @@ def repack(boot: Path, ramdisk: Path, out: Path) -> None:
           % (len(kernel), len(ramdisk_blob), len(second), len(blob)))
 
 
+def repack_fd(boot: Path, fd: Path, out: Path) -> None:
+    """Swap the FD inside gzip(BootShim + FD) and keep the appended DTB."""
+    data = boot.read_bytes()
+    if data[:8] != b"ANDROID!":
+        raise SystemExit("不是 Android 启动镜像")
+    ks, _ka, rs, _ra, ss, _sa, _ta, page = struct.unpack_from("<8I", data, 8)
+    kernel = data[page:page + ks]
+
+    engine = zlib.decompressobj(31)
+    body = engine.decompress(kernel) + engine.flush()
+    trailing = engine.unused_data
+    sig = body.find(b"_FVH")
+    if sig < 40:
+        raise SystemExit("kernel 载荷里找不到固件卷头")
+    fd_off = sig - 40
+
+    new_fd = fd.read_bytes()
+    if len(new_fd) != 0x300000:
+        raise SystemExit("FD 必须是 0x300000 字节，实得 %d" % len(new_fd))
+    new_kernel = gzip.compress(body[:fd_off] + new_fd, compresslevel=6, mtime=0) + trailing
+
+    rd_off = page + ((ks + page - 1) // page) * page
+    second_off = rd_off + ((rs + page - 1) // page) * page
+    ramdisk = data[rd_off:rd_off + rs]
+    second = data[second_off:second_off + ss]
+
+    header = bytearray(data[:page])
+    struct.pack_into("<I", header, 8, len(new_kernel))
+    blob = bytearray(header)
+    for part in (new_kernel, ramdisk, second):
+        blob += part
+        blob += b"\0" * ((-len(part)) % page)
+    out.write_bytes(bytes(blob))
+    print("boot.img 内嵌 FD 已替换: kernel %d -> %d 字节, shim %d 字节"
+          % (ks, len(new_kernel), fd_off))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -234,6 +279,11 @@ def main() -> int:
     r.add_argument("--ramdisk", type=Path, required=True)
     r.add_argument("--out", type=Path, required=True)
 
+    d = sub.add_parser("refd", help="把新固件卷换进 boot.img 的 kernel")
+    d.add_argument("--boot", type=Path, required=True)
+    d.add_argument("--fd", type=Path, required=True)
+    d.add_argument("--out", type=Path, required=True)
+
     a = ap.parse_args()
     if a.cmd == "fat":
         files = {}
@@ -247,8 +297,10 @@ def main() -> int:
         print("FAT12 镜像 %s: %d 字节" % (a.out, len(image)))
         for name in sorted(files):
             print("   %-28s %d 字节" % (name, len(files[name])))
-    else:
+    elif a.cmd == "repack":
         repack(a.boot, a.ramdisk, a.out)
+    else:
+        repack_fd(a.boot, a.fd, a.out)
     return 0
 
 

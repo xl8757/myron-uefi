@@ -54,7 +54,7 @@ def check_shim(path: Path) -> None:
     print(f"shim: {len(data)} bytes, text_offset={text_offset:#x}, image_size={image_size:#x}")
 
 
-def check_boot_img(path: Path) -> None:
+def check_boot_img(path: Path, expected_fd: Path | None = None) -> None:
     data = path.read_bytes()
     if data[:8] != b"ANDROID!":
         fail(f"{path.name} is not an Android boot image")
@@ -98,6 +98,27 @@ def check_boot_img(path: Path) -> None:
     )
     if payload < FD_SIZE:
         fail(f"decompressed payload is {payload:#x}, smaller than one firmware volume ({FD_SIZE:#x})")
+    #
+    # The workflow builds twice: the first build emits the boot image, the
+    # second only regenerates the FV. Compare the FD actually embedded in the
+    # image against the one being published, otherwise a stale payload volume
+    # reaches the device and no amount of offline checking notices.
+    #
+    fd_off = body.find(b"_FVH") - 40
+    if fd_off < 0 or len(body) - fd_off < FD_SIZE:
+        fail("the decompressed kernel has no complete firmware volume")
+    embedded = body[fd_off:fd_off + FD_SIZE]
+    if expected_fd is not None:
+        want = expected_fd.read_bytes()
+        if embedded != want:
+            import hashlib
+            fail("boot.img embeds a DIFFERENT firmware volume than %s "
+                 "(embedded %s, expected %s)" %
+                 (expected_fd.name,
+                  hashlib.sha256(embedded).hexdigest()[:12],
+                  hashlib.sha256(want).hexdigest()[:12]))
+        print(f"  embedded FD matches {expected_fd.name}")
+
     tail = data[start + kernel_size:]
     if tail:
         print(f"  trailing after kernel: {len(tail)} bytes")
@@ -107,9 +128,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--shim", type=Path, required=True)
     ap.add_argument("--img", type=Path, required=True)
+    ap.add_argument("--fd", type=Path, default=None,
+                    help="fail if the FD inside boot.img differs from this file")
     args = ap.parse_args()
     check_shim(args.shim)
-    check_boot_img(args.img)
+    check_boot_img(args.img, args.fd)
     print("PASS")
 
 

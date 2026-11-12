@@ -215,7 +215,7 @@ jobs:
           img=$(ls Mu-myron*.img | head -1)
           # 校验 shim 里确实带上了本次的两处修正（DAIF 屏蔽、跳转前 cache 同步），
           # 并核对 boot.img 的头部参数与解压后的载荷。
-          python3 ../tools/check_artifacts.py --shim BootShim/BootShim.bin --img "$img"
+          python3 ../tools/check_artifacts.py --shim BootShim/BootShim.bin --img "$img" --fd "$fd"
           sha256sum "$img" BootShim/BootShim.bin
           cp "$img" BootShim/../myron-boot.img
 
@@ -238,9 +238,16 @@ jobs:
           source ../venv/bin/activate
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           cd ..
+          # 第二次构建只增量重跑 GenFv：Build/ 下的 FD 更新了，但
+          # myron-boot.img 仍是第一次构建时内嵌的旧 FD。实测后果是设备读到
+          # 旧 unixnu.toml（timeout=30、相对路径），payload 卷的改动永远到
+          # 不了机器。把新 FD 换进 gzip(BootShim + FD) 并强制比对。
+          fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
+          python3 tools/make_payload.py refd --boot Mu-Silicium/myron-boot.img \
+            --fd "$fd" --out Mu-Silicium/myron-boot.img
           ls -l Mu-Silicium/myron-boot.img
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
-            --img Mu-Silicium/myron-boot.img
+            --img Mu-Silicium/myron-boot.img --fd "$fd"
 
       # 官方负载发现顺序（unixnu.com porting/uefi-firmware#payload-discovery）第一条
       # 就是 ramdisk_bytes > 0。同一台机器的社区记录（xwsjjctz/UniXNU-NX769J 的
@@ -253,8 +260,9 @@ jobs:
             --ramdisk Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload.img \
             --out Mu-Silicium/myron-boot.img
           ls -l Mu-Silicium/myron-boot.img
+          fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
-            --img Mu-Silicium/myron-boot.img
+            --img Mu-Silicium/myron-boot.img --fd "$fd"
 
       - uses: actions/upload-artifact@v4
         with:
