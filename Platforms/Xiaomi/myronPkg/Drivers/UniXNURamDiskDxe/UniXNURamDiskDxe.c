@@ -189,7 +189,10 @@ DrawMarkers (
   }
 
   Mode = Gop->Mode;
-  if ((Mode->Info == NULL) || (Mode->Info->PixelFormat >= PixelBitMask)) {
+  // Only a blt-only mode has no linear framebuffer to write into. Bitmask
+  // pixel formats are fine: the markers are 0xFFFFFFFF or near-solid, so the
+  // channel order does not change whether they read as white or as a colour.
+  if ((Mode->Info == NULL) || (Mode->Info->PixelFormat == PixelBltOnly)) {
     return;
   }
 
