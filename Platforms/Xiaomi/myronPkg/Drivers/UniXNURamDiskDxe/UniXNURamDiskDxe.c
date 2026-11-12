@@ -128,43 +128,24 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
   RamBlockFlush
 };
 
+//
+// Where the boot image asks ABL to place the ramdisk. The classic 0x01000000
+// sits outside the DRAM this platform maps, so a device published over it would
+// fault on the first read; this address is just below FD_Reserved, inside the
+// window the memory map already describes.
+//
+#define RAMDISK_FALLBACK_BASE  0xA6F00000
+#define RAMDISK_FALLBACK_MAX   0x01000000
+
 STATIC
 VOID
-PublishInitrd (
-  IN CONST VOID  *Fdt
+PublishRange (
+  IN UINT64  Start,
+  IN UINT64  End
   )
 {
   EFI_STATUS  Status;
-  INT32       Chosen;
-  CONST VOID  *StartProp;
-  CONST VOID  *EndProp;
-  INT32       StartLength;
-  INT32       EndLength;
-  UINT64      Start;
-  UINT64      End;
   EFI_HANDLE  Handle;
-
-  Chosen = FdtPathOffset (Fdt, "/chosen");
-  if (Chosen < 0) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no /chosen\n"));
-    return;
-  }
-
-  StartProp = FdtGetProp (Fdt, Chosen, "linux,initrd-start", &StartLength);
-  EndProp   = FdtGetProp (Fdt, Chosen, "linux,initrd-end", &EndLength);
-  if ((StartProp == NULL) || (EndProp == NULL) ||
-      ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
-  {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no initrd in /chosen\n"));
-    return;
-  }
-
-  Start = ReadCells (StartProp, StartLength / 4);
-  End   = ReadCells (EndProp, EndLength / 4);
-  if (End <= Start) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: empty initrd 0x%lx-0x%lx\n", Start, End));
-    return;
-  }
 
   //
   // The bootloader does not always end the initrd on a sector boundary: the
@@ -202,6 +183,121 @@ PublishInitrd (
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: initrd block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
 }
 
+STATIC
+BOOLEAN
+PublishInitrd (
+  IN CONST VOID  *Fdt
+  )
+{
+  INT32       Chosen;
+  CONST VOID  *StartProp;
+  CONST VOID  *EndProp;
+  INT32       StartLength;
+  INT32       EndLength;
+  UINT64      Start;
+  UINT64      End;
+
+  Chosen = FdtPathOffset (Fdt, "/chosen");
+  if (Chosen < 0) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no /chosen\n"));
+    return FALSE;
+  }
+
+  StartProp = FdtGetProp (Fdt, Chosen, "linux,initrd-start", &StartLength);
+  EndProp   = FdtGetProp (Fdt, Chosen, "linux,initrd-end", &EndLength);
+  if ((StartProp == NULL) || (EndProp == NULL) ||
+      ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
+  {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no initrd in /chosen\n"));
+    return FALSE;
+  }
+
+  Start = ReadCells (StartProp, StartLength / 4);
+  End   = ReadCells (EndProp, EndLength / 4);
+  if (End <= Start) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: empty initrd 0x%lx-0x%lx\n", Start, End));
+    return FALSE;
+  }
+
+  PublishRange (Start, End);
+  return TRUE;
+}
+
+/**
+  Size a FAT volume sitting at Base from its own boot sector.
+
+  @param[in]  Base  Candidate volume.
+  @param[out] Size  Length in bytes taken from the BPB.
+
+  @retval TRUE   A boot sector with a sane geometry is there.
+  @retval FALSE  Nothing usable.
+**/
+STATIC
+BOOLEAN
+FatVolumeSize (
+  IN  UINT64  Base,
+  OUT UINT64  *Size
+  )
+{
+  CONST UINT8  *Sector = (CONST UINT8 *)(UINTN)Base;
+  UINT16       BytesPerSector;
+  UINT16       Total16;
+  UINT32       Total32;
+  UINT8        SectorsPerCluster;
+  UINT64       Total;
+
+  if ((Sector[510] != 0x55) || (Sector[511] != 0xAA)) {
+    return FALSE;
+  }
+
+  BytesPerSector    = ReadUnaligned16 ((CONST UINT16 *)(Sector + 11));
+  SectorsPerCluster = Sector[13];
+  Total16           = ReadUnaligned16 ((CONST UINT16 *)(Sector + 19));
+  Total32           = ReadUnaligned32 ((CONST UINT32 *)(Sector + 32));
+
+  if ((BytesPerSector != RAM_BLOCK_SIZE) ||
+      ((SectorsPerCluster != 1) && (SectorsPerCluster != 2) &&
+       (SectorsPerCluster != 4) && (SectorsPerCluster != 8) &&
+       (SectorsPerCluster != 16) && (SectorsPerCluster != 32)))
+  {
+    return FALSE;
+  }
+
+  Total = (Total16 != 0) ? Total16 : Total32;
+  if ((Total == 0) || (Total * RAM_BLOCK_SIZE > RAMDISK_FALLBACK_MAX)) {
+    return FALSE;
+  }
+
+  *Size = Total * RAM_BLOCK_SIZE;
+  return TRUE;
+}
+
+/**
+  Publish the ramdisk at the address the boot image asks ABL to load it to.
+
+  ABL only writes linux,initrd-start/end into /chosen when it recognises the
+  payload as something it should describe, and it does not do that for a boot
+  shim. The ramdisk is in memory either way; its own boot sector says how long
+  it is, so nothing else is needed.
+**/
+STATIC
+VOID
+PublishFallback (
+  VOID
+  )
+{
+  UINT64  Size;
+
+  if (!FatVolumeSize (RAMDISK_FALLBACK_BASE, &Size)) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: nothing at 0x%lx either\n", (UINT64)RAMDISK_FALLBACK_BASE));
+    return;
+  }
+
+  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: ramdisk at 0x%lx, %lu bytes from its BPB\n",
+          (UINT64)RAMDISK_FALLBACK_BASE, Size));
+  PublishRange (RAMDISK_FALLBACK_BASE, RAMDISK_FALLBACK_BASE + Size);
+}
+
 EFI_STATUS
 EFIAPI
 UniXNURamDiskDxeEntry (
@@ -230,6 +326,9 @@ UniXNURamDiskDxeEntry (
 
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
 
-  PublishInitrd ((VOID *)(UINTN)Dtb);
+  if (!PublishInitrd ((VOID *)(UINTN)Dtb)) {
+    PublishFallback ();
+  }
+
   return EFI_SUCCESS;
 }

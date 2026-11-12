@@ -57,6 +57,9 @@ gMemoryDescriptor[] = {
   {"Display_Reserved", 0xFC800000, 0x02B00000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},
 
   // UEFI and XNU allocations carved only from gaps in the live memory map.
+  // 装载器把 payload 卷放在这里（boot.img 头的 ramdisk_addr）。0x01000000
+  // 那个经典地址落在本平台没有映射的洞里，读它会直接取指异常。
+  {"Initrd",             0xA6F00000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"FD_Reserved",        0xA7000000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"UEFI_FD",            0xA7100000, 0x00300000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"UEFI_FD_Reserved",   0xA7400000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
