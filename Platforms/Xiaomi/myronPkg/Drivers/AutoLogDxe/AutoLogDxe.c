@@ -29,17 +29,28 @@
 #include <Library/UefiBootServicesTableLib.h>
 
 #define AUTOLOG_TICK_2S       20000000ULL
-#define AUTOLOG_DELAY_TICKS   7   /* 14 s: let the 10 s menu countdown finish */
+
+//
+// Timing, measured from the last complete firmware log:
+//   this driver is dispatched at ~25.5 s after power on,
+//   the UniXNU menu appears at ~29.5 s,
+//   the payload config sets a 10 s countdown, so the default boot entry is
+//   attempted at ~39.5 s and its result is already in the log.
+//
+// 12 ticks x 2 s = 24 s after dispatch -> QR frames start at ~49.5 s, i.e.
+// "fifty seconds". Starting the viewer earlier would block the menu countdown
+// (Run() is called synchronously from a timer callback and only exits on a key
+// press, which this board cannot produce), and the boot attempt would never be
+// logged. Waiting until after it means one boot captures the whole story.
+//
+#define AUTOLOG_DELAY_TICKS   12
 
 //
 // The official viewer's event loop only exits on a key press. This board has
-// no ConIn, and Run() is called synchronously from a timer callback, so while
-// it rotates frames the menu's own countdown is blocked. The QR export has
-// already served its purpose (two complete logs, root cause found and fixed),
-// so leave it off for this round and let the 30 s menu countdown reach
-// HelloPayload.efi. Set to 1 to restore QR log capture on a future build.
+// no ConIn, so it rotates frames indefinitely -- which is exactly what we
+// want for scanning, now that the menu has already had its turn.
 //
-#define AUTOLOG_ENABLE_QR_VIEWER  0
+#define AUTOLOG_ENABLE_QR_VIEWER  1
 
 STATIC BOOLEAN  mStarted = FALSE;
 STATIC UINTN    mTicks   = 0;

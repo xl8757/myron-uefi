@@ -3,7 +3,7 @@
 version = 1
 
 [boot]
-timeout = 30
+timeout = 10
 default = "hello"
 rotate = 3
 
@@ -14,4 +14,6 @@ title = "UniXNU"
 id = "hello"
 title = "Hello payload"
 type = "efi"
-path = "PAYLOADS/HELLO.EFI"
+# 绝对路径（以 / 开头）：Config.c 的 MakePath() 会把相对路径一律拼到
+# \EFI\UniXNU 下，而 HELLO.EFI 在卷根目录的 PAYLOADS\ 里。
+path = "/PAYLOADS/HELLO.EFI"
