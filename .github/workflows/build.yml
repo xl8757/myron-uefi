@@ -134,6 +134,21 @@ jobs:
           git clone --depth 1 https://github.com/UniXNU/DarwinBoot.git darwinboot
           cp -r unixnu/package/UniXNUPkg Mu-Silicium/Platforms/Xiaomi/UniXNUPkg
           cp -r darwinboot/DarwinBootPkg Mu-Silicium/Platforms/Xiaomi/DarwinBootPkg
+          # 把 UniXNULib 对齐到官方主仓库。fork 停在 version 0.1.0，其 Main.c
+          # 只在 Host == UniXNUHostFirmware 时才 UniXNUConnectAll ()；BDS 以普通
+          # 应用启动菜单时不会连控制器，initrd 卷就拿不到 SimpleFileSystem，
+          # 表现正是 'no boot entry found'（同机型真机记录也点名这一条）。
+          # AdvancedLogDxe 先不接：固定的 Mu 里没有 AdvLoggerPkg/MsGraphicsPkg/
+          # QrEncoderLib，官方 dsc 本来也只把它列为可选插件。
+          cp -R overlay/UniXNUPkg/. Mu-Silicium/Platforms/Xiaomi/UniXNUPkg/
+          # 构建前断言：无条件 ConnectAll 确实进了构建树，避免 overlay 失效。
+          grep -q '^  UniXNUConnectAll ();' \
+            Mu-Silicium/Platforms/Xiaomi/UniXNUPkg/Library/UniXNULib/Main.c
+          if grep -q 'if (Host == UniXNUHostFirmware)' \
+            Mu-Silicium/Platforms/Xiaomi/UniXNUPkg/Library/UniXNULib/Main.c; then
+            echo "Main.c 仍是条件式 ConnectAll"; exit 1
+          fi
+          echo "官方新版 UniXNULib 已就位（无条件 ConnectAll）"
           ls Mu-Silicium/Platforms/Xiaomi
 
 
