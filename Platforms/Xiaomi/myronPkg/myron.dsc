@@ -194,6 +194,7 @@
   UniXNUPkg/Application/UniXNU/UniXNU.inf
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
   UniXNUPkg/Driver/AdvancedLogDxe/AdvancedLogDxe.inf
+  myronPkg/Drivers/AutoLogDxe/AutoLogDxe.inf
   myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
   # 只编译不打包：这个 EFI 是 payload 卷里的启动条目，用来验证
   # 「菜单 -> 条目 -> 交接」这条链，不需要进固件卷。

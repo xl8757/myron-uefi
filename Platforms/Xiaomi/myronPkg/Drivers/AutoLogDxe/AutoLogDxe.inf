@@ -1,0 +1,28 @@
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = AutoLogDxe
+  FILE_GUID                      = 5C1A7E42-9B3D-4F08-A6C1-729E334BD015
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = AutoLogDxeEntry
+
+[Sources]
+  AutoLogDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UniXNUPkg/UniXNUPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid   ## CONSUMES
+  gUniXNUMenuPluginProtocolGuid    ## CONSUMES
+
+[Depex]
+  TRUE
