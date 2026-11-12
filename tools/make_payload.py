@@ -2,9 +2,13 @@
 
 Two jobs, both done without external tools:
 
-  fat     lay out a FAT16 volume holding the UniXNU configuration and its
+  fat     lay out a FAT12 volume holding the UniXNU configuration and its
           payloads, because the menu reads /EFI/UniXNU/unixnu.toml from a
-          file-system volume and nothing else.
+          file-system volume and nothing else. FAT12, not FAT16: a payload this
+          small works out to a few hundred clusters, and the FAT type is
+          decided by cluster count, so a volume labelled FAT16 with 502
+          clusters is read with 12-bit entries by any conforming driver and
+          fails to mount.
 
   repack  rewrite an Android boot image (header v0) with that volume as its
           ramdisk. build_uefi.py packs whatever sits in Resources/ramdisk, but
@@ -22,7 +26,7 @@ import sys
 from pathlib import Path
 
 SECTOR = 512
-CLUSTER_SECTORS = 4
+CLUSTER_SECTORS = 1
 RESERVED = 1
 NUM_FATS = 2
 ROOT_ENTRIES = 512
@@ -32,7 +36,7 @@ CLUSTER = CLUSTER_SECTORS * SECTOR
 ATTR_DIR = 0x10
 ATTR_ARCHIVE = 0x20
 ATTR_VOLUME = 0x08
-EOC = 0xFFFF
+EOC = 0xFFF
 LABEL = b"UNIXNUPAYLD"
 
 
@@ -54,23 +58,23 @@ def dir_entry(name: bytes, attr: int, cluster: int, size: int) -> bytes:
     return bytes(entry)
 
 
-class Fat16:
+class FatVolume:
     def __init__(self, total_sectors: int):
         self.total = total_sectors
         spf = 1
         while True:
             clusters = (total_sectors - RESERVED - ROOT_SECTORS - NUM_FATS * spf) // CLUSTER_SECTORS
-            need = ((clusters + 2) * 2 + SECTOR - 1) // SECTOR
+            need = ((clusters + 2) * 3 // 2 + SECTOR - 1) // SECTOR
             if need <= spf:
                 break
             spf = need
         self.spf = spf
         self.clusters = clusters
-        if clusters >= 0xFFF0:
-            raise SystemExit("卷太大，FAT16 装不下")
+        if clusters >= 0xFF5:
+            raise SystemExit("卷太大，FAT12 装不下（>4084 簇）")
         self.data_start = RESERVED + NUM_FATS * spf + ROOT_SECTORS
         self.fat = [0] * (clusters + 2)
-        self.fat[0] = 0xFFF8
+        self.fat[0] = 0xFF8
         self.fat[1] = EOC
         self.next_free = 2
         self.data = bytearray(total_sectors * SECTOR)
@@ -119,13 +123,19 @@ class Fat16:
         bs[38] = 0x29
         struct.pack_into("<I", bs, 39, 0x4D59524E)
         bs[43:54] = LABEL
-        bs[54:62] = b"FAT16   "
+        bs[54:62] = b"FAT12   "
         bs[510:512] = b"\x55\xAA"
         self.data[0:SECTOR] = bs
 
         fat = bytearray(self.spf * SECTOR)
         for i, value in enumerate(self.fat):
-            struct.pack_into("<H", fat, i * 2, value)
+            off = i + i // 2                      # 每两项占 3 字节
+            if i & 1:
+                fat[off] = (fat[off] & 0x0F) | ((value << 4) & 0xF0)
+                fat[off + 1] = (value >> 4) & 0xFF
+            else:
+                fat[off] = value & 0xFF
+                fat[off + 1] = (fat[off + 1] & 0xF0) | ((value >> 8) & 0x0F)
         for n in range(NUM_FATS):
             off = (RESERVED + n * self.spf) * SECTOR
             self.data[off:off + len(fat)] = fat
@@ -133,7 +143,7 @@ class Fat16:
 
 
 def build_fat(files: dict, total_sectors: int) -> bytes:
-    fs = Fat16(total_sectors)
+    fs = FatVolume(total_sectors)
 
     root = {"dirs": {}, "files": [], "cluster": 0, "name": ""}
     for path, blob in files.items():
@@ -210,11 +220,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    f = sub.add_parser("fat", help="造 FAT16 卷")
+    f = sub.add_parser("fat", help="造 FAT12 卷")
     f.add_argument("--out", type=Path, required=True)
     f.add_argument("--add", action="append", default=[],
                    help="卷内路径=本地文件，例如 EFI/UNIXNU/UNIXNU.TOM=cfg.toml")
-    f.add_argument("--size-kib", type=int, default=8192)
+    f.add_argument("--size-kib", type=int, default=1024)
 
     r = sub.add_parser("repack", help="把 ramdisk 换进 boot.img")
     r.add_argument("--boot", type=Path, required=True)
@@ -231,7 +241,7 @@ def main() -> int:
             files[dest.strip("/")] = Path(src).read_bytes()
         image = build_fat(files, a.size_kib * 1024 // SECTOR)
         a.out.write_bytes(image)
-        print("FAT16 镜像 %s: %d 字节" % (a.out, len(image)))
+        print("FAT12 镜像 %s: %d 字节" % (a.out, len(image)))
         for name in sorted(files):
             print("   %-28s %d 字节" % (name, len(files[name])))
     else:
