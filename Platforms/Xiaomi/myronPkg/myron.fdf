@@ -113,6 +113,15 @@ READ_LOCK_STATUS   = TRUE
     SECTION UI = "PayloadVolume"
   }
 
+  # 48 MiB 大卷的稀疏副本（12 B 头 + 有效前缀，约 120 KB）。ABL 会忽略
+  # boot ramdisk，厂商 UFS 驱动栈在内存启动下又会死锁，唯一能到设备的通道
+  # 就是 FD 本身；DXE 把这份数据还原到 XNU_Payload 预留区 0xF0000000。
+  # 与 UniXNURamDiskDxe 同在 FvMain，保证 GetSectionFromAnyFv 能找到。
+  FILE FREEFORM = B2C3D4E5-6F7A-4B8C-9D0E-1F2A3B4C5D6E {
+    SECTION RAW = myronPkg/Payload/payload-big.sparse
+    SECTION UI = "BigPayloadSparse"
+  }
+
   INF DarwinBootPkg/Driver/DarwinBoot.inf
 
   # 路标驱动（屏幕色带），用于定位复位点

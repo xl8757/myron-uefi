@@ -142,6 +142,20 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 #define RAMDISK_FALLBACK_MAX   0x04000000
 
 //
+// The 48 MiB FAT volume is almost entirely zero, so the FFS file stores only
+// its used prefix. DXE clears the XNU_Payload reservation and copies the
+// prefix back before PublishFallback() reads the BPB. The whole volume then
+// lives in RAM without depending on ABL, UFS or any vendor driver.
+//
+#define SPARSE_MAGIC           SIGNATURE_32 ('U', 'X', 'S', 'P')
+#define SPARSE_HEADER_SIZE     12
+#define XNU_PAYLOAD_MAX_SIZE   0x03800000ULL
+
+STATIC CONST EFI_GUID  mSparsePayloadGuid = {
+  0xB2C3D4E5, 0x6F7A, 0x4B8C, { 0x9D, 0x0E, 0x1F, 0x2A, 0x3B, 0x4C, 0x5D, 0x6E }
+};
+
+//
 // Diagnostics for a board with no readable output channel. Everything printed
 // during DXE scrolls away, the BDS clears the console, and the menu app paints
 // over most of what is left. Two channels that survive all of that:
@@ -452,6 +466,51 @@ FatVolumeSize (
 **/
 STATIC
 BOOLEAN
+UnpackSparseVolume (
+  VOID
+  )
+{
+  EFI_STATUS    Status;
+  VOID          *Data;
+  UINTN         Size;
+  CONST UINT8   *Blob;
+  UINT32        Total;
+  UINT32        Used;
+
+  Data = NULL;
+  Size = 0;
+  Status = GetSectionFromAnyFv (&mSparsePayloadGuid, EFI_SECTION_RAW, 0, &Data, &Size);
+  if (EFI_ERROR (Status) || (Data == NULL) || (Size < SPARSE_HEADER_SIZE)) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no sparse payload in the FV: %r\n", Status));
+    return FALSE;
+  }
+
+  Blob = (CONST UINT8 *)Data;
+  if (ReadUnaligned32 ((CONST UINT32 *)Blob) != SPARSE_MAGIC) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: bad sparse payload magic\n"));
+    return FALSE;
+  }
+
+  Total = ReadUnaligned32 ((CONST UINT32 *)(Blob + 4));
+  Used  = ReadUnaligned32 ((CONST UINT32 *)(Blob + 8));
+  if ((Total == 0) || (Total > RAMDISK_FALLBACK_MAX) ||
+      (Total > XNU_PAYLOAD_MAX_SIZE) || (Used > Total) ||
+      ((UINTN)Used + SPARSE_HEADER_SIZE != Size))
+  {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: bad sparse geometry total=%u used=%u section=%u\n",
+            Total, Used, (UINT32)Size));
+    return FALSE;
+  }
+
+  ZeroMem ((VOID *)(UINTN)RAMDISK_FALLBACK_BASE, Total);
+  CopyMem ((VOID *)(UINTN)RAMDISK_FALLBACK_BASE, Blob + SPARSE_HEADER_SIZE, Used);
+  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: restored %u/%u bytes to 0x%lx\n",
+          Used, Total, (UINT64)RAMDISK_FALLBACK_BASE));
+  return TRUE;
+}
+
+STATIC
+BOOLEAN
 PublishFallback (
   VOID
   )
@@ -480,6 +539,13 @@ UniXNURamDiskDxeEntry (
 {
   EFI_HOB_GUID_TYPE  *Hob;
   UINT64             Dtb;
+
+  //
+  // Rebuild the large volume from its sparse copy in the FD first. This is the
+  // only payload channel that reaches the device: ABL ignores the boot ramdisk
+  // and the vendor UFS stack deadlocks without the stock boot environment.
+  //
+  UnpackSparseVolume ();
 
   //
   // Try the large ramdisk in the XNU_Payload reservation first. It is the only

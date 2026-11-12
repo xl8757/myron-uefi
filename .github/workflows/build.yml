@@ -199,6 +199,10 @@ jobs:
         env:
           BUILD_TYPE: ${{ inputs.build_type || 'DEBUG' }}
         run: |
+          # FDF 在第一次构建就会引用稀疏卷，此时还没有 HelloPayload.efi；
+          # 先放一个只含头部的占位，第二次构建前会被真实内容覆盖。
+          python3 tools/make_payload.py sparse --placeholder \
+            --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.sparse
           cd Mu-Silicium
           source ../venv/bin/activate
           if [ "$BUILD_TYPE" = DEBUG ]; then
@@ -242,6 +246,9 @@ jobs:
             --size-kib 49152 --cluster-sectors 32 \
             --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu-big.toml" \
             --add "PAYLOADS/HELLO.EFI=$efi"
+          python3 tools/make_payload.py sparse \
+            --in Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.img \
+            --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.sparse
           cd Mu-Silicium
           source ../venv/bin/activate
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"

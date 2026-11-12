@@ -15,6 +15,10 @@ Two jobs, both done without external tools:
           the payload it should carry is produced by that same run, so the
           image is rebuilt afterwards instead of racing the build.
 
+  sparse  pack a large FAT volume for embedding in the FD. The tail of such a
+          volume is entirely zero, so store only the used prefix plus a 12-byte
+          header; DXE clears the XNU_Payload window and copies the prefix back.
+
   refd    replace the firmware volume embedded in the boot image's gzip kernel.
           The workflow builds twice: the first build emits myron-boot.img, the
           second (after the payload volume exists) only regenerates the FV.
@@ -266,6 +270,28 @@ def repack_fd(boot: Path, fd: Path, out: Path) -> None:
           % (ks, len(new_kernel), fd_off))
 
 
+def make_sparse(out: Path, src: Path | None, total: int, placeholder: bool) -> None:
+    """UXSP magic + total length + used length + used prefix of the volume."""
+    if placeholder:
+        used, prefix = 0, b""
+    else:
+        if src is None:
+            raise SystemExit("sparse 需要 --in（或用 --placeholder）")
+        volume = src.read_bytes()
+        used = len(volume)
+        while used > 0 and volume[used - 1] == 0:
+            used -= 1
+        total = len(volume)
+        prefix = volume[:used]
+    blob = b"UXSP" + struct.pack("<II", total, used) + prefix
+    out.write_bytes(blob)
+    if placeholder:
+        print("占位稀疏镜像 %s: %d 字节 (total %d)" % (out, len(blob), total))
+    else:
+        print("稀疏镜像 %s: %d -> %d 字节 (%.2f%%)，还原到 %d 字节"
+              % (out, total, len(blob), 100.0 * len(blob) / total, total))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -283,6 +309,13 @@ def main() -> int:
     r.add_argument("--ramdisk", type=Path, required=True)
     r.add_argument("--out", type=Path, required=True)
     r.add_argument("--ramdisk-addr", type=lambda x: int(x, 0), default=0xA6F00000)
+
+    s = sub.add_parser("sparse", help="把大 FAT 卷压成稀疏镜像")
+    s.add_argument("--out", type=Path, required=True)
+    s.add_argument("--in", dest="src", type=Path, default=None)
+    s.add_argument("--total", type=lambda x: int(x, 0), default=48 * 1024 * 1024)
+    s.add_argument("--placeholder", action="store_true",
+                   help="只写头部，供第一次构建时 FDF 引用")
 
     d = sub.add_parser("refd", help="把新固件卷换进 boot.img 的 kernel")
     d.add_argument("--boot", type=Path, required=True)
@@ -304,6 +337,8 @@ def main() -> int:
             print("   %-28s %d 字节" % (name, len(files[name])))
     elif a.cmd == "repack":
         repack(a.boot, a.ramdisk, a.out, a.ramdisk_addr)
+    elif a.cmd == "sparse":
+        make_sparse(a.out, a.src, a.total, a.placeholder)
     else:
         repack_fd(a.boot, a.fd, a.out)
     return 0
