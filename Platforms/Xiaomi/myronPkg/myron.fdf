@@ -99,6 +99,18 @@ READ_LOCK_STATUS   = TRUE
   INF UniXNUPkg/Application/UniXNU/UniXNU.inf
   INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
   INF myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
+  # payload 卷：UniXNU 从文件系统卷里读 /EFI/UniXNU/unixnu.toml，而内存启动
+  # 时装载器把它放到哪儿不由我们决定（实测 boot ramdisk 到不了菜单）。
+  #
+  # 必须和 UniXNURamDiskDxe 放在同一个 FV：驱动用 GetSectionFromAnyFv 找这份
+  # RAW，而该函数只遍历已安装 EFI_FIRMWARE_VOLUME2_PROTOCOL 的 FV。驱动能被
+  # 从 FvMain 调度，就证明 FvMain 在运行时一定有 FV2 协议；放在外层
+  # FVMAIN_COMPACT（含 SEC、被压缩的那层）则不保证。内容由 CI 生成。
+  FILE FREEFORM = A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D {
+    SECTION RAW = myronPkg/Payload/payload.img
+    SECTION UI = "PayloadVolume"
+  }
+
   INF DarwinBootPkg/Driver/DarwinBoot.inf
 
   # 路标驱动（屏幕色带），用于定位复位点
@@ -144,14 +156,6 @@ READ_LOCK_STATUS   = TRUE
     SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
       SECTION FV_IMAGE = FVMAIN
     }
-  }
-
-  # payload 卷：UniXNU 从文件系统卷里读 /EFI/UniXNU/unixnu.toml，而内存启动
-  # 时装载器把它放到哪儿不由我们决定。放在固件卷里就没有这个问题，驱动直接用
-  # GetSectionFromAnyFv 取。内容由 CI 生成（tools/make_payload.py）。
-  FILE FREEFORM = A1B2C3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D {
-    SECTION RAW = myronPkg/Payload/payload.img
-    SECTION UI = "PayloadVolume"
   }
 
   !include SiliciumPkg/Common.fdf.inc
