@@ -218,6 +218,20 @@ jobs:
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
             --img Mu-Silicium/myron-boot.img
 
+      # 官方负载发现顺序（unixnu.com porting/uefi-firmware#payload-discovery）第一条
+      # 就是 ramdisk_bytes > 0。同一台机器的社区记录（xwsjjctz/UniXNU-NX769J 的
+      # DEVICE-EVIDENCE）也实测：boot ramdisk 走默认 0x01000000 到不了菜单，但把
+      # ramdisk_addr 挪进已描述的内存（这里 0xA6F00000，见 MemoryMapLib 的 Initrd
+      # 描述符）后 /chosen 与固定地址两条路都能接上。repack 同时改长度和地址。
+      - name: repack boot image with the payload ramdisk
+        run: |
+          python3 tools/make_payload.py repack --boot Mu-Silicium/myron-boot.img \
+            --ramdisk Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload.img \
+            --out Mu-Silicium/myron-boot.img
+          ls -l Mu-Silicium/myron-boot.img
+          python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
+            --img Mu-Silicium/myron-boot.img
+
       - uses: actions/upload-artifact@v4
         with:
           name: uefi-myron

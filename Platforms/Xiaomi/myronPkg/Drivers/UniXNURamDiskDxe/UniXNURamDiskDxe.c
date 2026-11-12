@@ -14,6 +14,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/DevicePath.h>
+#include <Protocol/GraphicsOutput.h>
 
 // Mu-Silicium SEC stores the incoming x0 value in this HOB as a UINT64.
 STATIC CONST EFI_GUID mEntryArgHobGuid = {
@@ -139,13 +140,83 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 #define RAMDISK_FALLBACK_MAX   0x01000000
 
 //
-// Diagnostics for a board with no spare output channel. Nothing printed during
-// DXE survives: BDS clears the console and the menu app repaints over it. A
-// timer reprints one line into the console instead, so the state stays visible
-// in the same area the menu app logs to. The line is overwritten in place with
-// a carriage return rather than scrolling.
+// Diagnostics for a board with no readable output channel. Everything printed
+// during DXE scrolls away, the BDS clears the console, and the menu app paints
+// over most of what is left. Two channels that survive all of that:
 //
-STATIC CHAR16  mStatus[96] = L"\rUNIXNURAMDISK: not started";
+//  - a timer rewrites the status line at row 0 of the console, the one row that
+//    stays visible in the log area the menu leaves uncovered;
+//  - the same timer paints small squares in the top-left corner of whatever
+//    framebuffer the GOP currently reports, on top of any graphics.
+//
+// One white square: the firmware volume copy. Two: the loader hand-over. Three:
+// the fixed-address fallback. Red instead of white: that path failed. The line
+// names the path in words as well.
+//
+#define MARKER_SQUARE  48
+#define MARKER_PITCH   64
+#define MARKER_MARGIN  8
+#define MARKER_WHITE   0xFFFFFFFFU
+// Opaque red in BGRA; the exact hue does not matter, only that it is not
+// white, because "not white" is the failure signal.
+#define MARKER_RED     0xFF0000FFU
+
+STATIC CHAR16  mStatus[96];
+STATIC UINTN   mMarkerCount;
+STATIC UINT32  mMarkerColor = MARKER_WHITE;
+
+STATIC
+VOID
+DrawMarkers (
+  VOID
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  EFI_GRAPHICS_OUTPUT_MODE      *Mode;
+  UINT32                        *Row;
+  UINTN                         Index;
+  UINTN                         X;
+  UINTN                         Y;
+
+  if (mMarkerCount == 0) {
+    return;
+  }
+
+  Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&Gop);
+  if (EFI_ERROR (Status) || (Gop == NULL) || (Gop->Mode == NULL)) {
+    return;
+  }
+
+  Mode = Gop->Mode;
+  if ((Mode->Info == NULL) || (Mode->Info->PixelFormat >= PixelBitMask)) {
+    return;
+  }
+
+  for (Index = 0; Index < mMarkerCount; Index++) {
+    for (Y = MARKER_MARGIN; (Y < MARKER_MARGIN + MARKER_SQUARE) && (Y < Mode->Info->VerticalResolution); Y++) {
+      Row = (UINT32 *)(UINTN)(Mode->FrameBufferBase + (UINT64)Y * Mode->Info->PixelsPerScanLine * 4);
+      for (X = MARKER_MARGIN + Index * MARKER_PITCH;
+           (X < MARKER_MARGIN + Index * MARKER_PITCH + MARKER_SQUARE) && (X < Mode->Info->HorizontalResolution);
+           X++)
+      {
+        Row[X] = mMarkerColor;
+      }
+    }
+  }
+}
+
+STATIC
+VOID
+PrintStatusLine (
+  VOID
+  )
+{
+  if ((gST != NULL) && (gST->ConOut != NULL)) {
+    gST->ConOut->SetCursorPosition (gST->ConOut, 0, 0);
+    gST->ConOut->OutputString (gST->ConOut, mStatus);
+  }
+}
 
 STATIC
 VOID
@@ -155,33 +226,40 @@ StatusTick (
   IN VOID       *Context
   )
 {
-  if (gST != NULL) {
-    gST->ConOut->OutputString (gST->ConOut, mStatus);
-  }
+  PrintStatusLine ();
+  DrawMarkers ();
 }
 
 STATIC
 VOID
 PublishStatus (
-  IN CONST CHAR16  *Text
+  IN UINTN          MarkerCount,
+  IN UINT32         MarkerColor,
+  IN CONST CHAR16   *Text
   )
 {
   EFI_EVENT  Event;
+  UINTN      Index;
+  UINTN      Src;
 
-  UINTN  Index;
+  Index = 0;
+  while ((Index < 70) && (Text[Index] != L'\0')) {
+    mStatus[Index] = Text[Index];
+    Index++;
+  }
 
-  Index          = 0;
-  mStatus[Index++] = L'\r';
-  while ((Index < ARRAY_SIZE (mStatus) - 1) && (Text[Index - 1] != L'\0')) {
-    mStatus[Index] = Text[Index - 1];
+  // Pad with spaces so an earlier, longer line cannot survive beside this one.
+  while (Index < 70) {
+    mStatus[Index] = L' ';
     Index++;
   }
 
   mStatus[Index] = L'\0';
+  mMarkerCount   = MarkerCount;
+  mMarkerColor   = MarkerColor;
 
-  if (gST != NULL) {
-    gST->ConOut->OutputString (gST->ConOut, mStatus);
-  }
+  PrintStatusLine ();
+  DrawMarkers ();
 
   Event = NULL;
   if (!EFI_ERROR (gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_APPLICATION, StatusTick, NULL, &Event))) {
@@ -267,7 +345,7 @@ PublishInitrd (
     return FALSE;
   }
 
-  PublishStatus (L"UNIXNURAMDISK: payload from /chosen");
+  PublishStatus (2, MARKER_WHITE, L"UNIXNURAMDISK: payload from /chosen");
   PublishRange (Start, End);
   return TRUE;
 }
@@ -301,12 +379,12 @@ PublishPayloadVolume (
   Status = GetSectionFromAnyFv (&mPayloadVolumeGuid, EFI_SECTION_RAW, 0, &Data, &Size);
   if (EFI_ERROR (Status) || (Data == NULL) || (Size == 0)) {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no payload volume in the FV: %r\n", Status));
-    PublishStatus (L"UNIXNURAMDISK: payload not in the FV");
+    PublishStatus (1, MARKER_RED, L"UNIXNURAMDISK: payload not in the FV");
     return FALSE;
   }
 
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: payload volume at 0x%lx, %lu bytes\n", (UINT64)(UINTN)Data, (UINT64)Size));
-  PublishStatus (L"UNIXNURAMDISK: payload from the FV");
+  PublishStatus (1, MARKER_WHITE, L"UNIXNURAMDISK: payload from the FV");
   PublishRange ((UINT64)(UINTN)Data, (UINT64)(UINTN)Data + Size);
   return TRUE;
 }
@@ -424,7 +502,7 @@ UniXNURamDiskDxeEntry (
     }
   }
 
-  PublishStatus (L"UNIXNURAMDISK: no payload anywhere");
+  PublishStatus (3, MARKER_RED, L"UNIXNURAMDISK: no payload anywhere");
   PublishFallback ();
   return EFI_SUCCESS;
 }
