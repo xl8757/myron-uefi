@@ -134,13 +134,22 @@ jobs:
           git clone --depth 1 https://github.com/UniXNU/DarwinBoot.git darwinboot
           cp -r unixnu/package/UniXNUPkg Mu-Silicium/Platforms/Xiaomi/UniXNUPkg
           cp -r darwinboot/DarwinBootPkg Mu-Silicium/Platforms/Xiaomi/DarwinBootPkg
+          # Official Advanced Logger (UniXNU Tools -> QR log export).
+          # Common/Mu is mu_plus, pulled by the submodule update above; stage
+          # the two packages under Platforms/Xiaomi, which is already in
+          # PACKAGES_PATH, so the DSC/INF names resolve without touching Mu's
+          # build driver.
+          cp -r Mu-Silicium/Common/Mu/AdvLoggerPkg Mu-Silicium/Platforms/Xiaomi/AdvLoggerPkg
+          cp -r Mu-Silicium/Common/Mu/MsGraphicsPkg Mu-Silicium/Platforms/Xiaomi/MsGraphicsPkg
+          test -f Mu-Silicium/Platforms/Xiaomi/AdvLoggerPkg/AdvLoggerPkg.dec
+          test -f Mu-Silicium/Platforms/Xiaomi/MsGraphicsPkg/Library/QrEncoderLib/QrEncoderLib.inf
           # 把 UniXNULib 对齐到官方主仓库。fork 停在 version 0.1.0，其 Main.c
           # 只在 Host == UniXNUHostFirmware 时才 UniXNUConnectAll ()；BDS 以普通
           # 应用启动菜单时不会连控制器，initrd 卷就拿不到 SimpleFileSystem，
           # 表现正是 'no boot entry found'（同机型真机记录也点名这一条）。
-          # AdvancedLogDxe 先不接：固定的 Mu 里没有 AdvLoggerPkg/MsGraphicsPkg/
-          # QrEncoderLib，官方 dsc 本来也只把它列为可选插件。
+          # overlay 同时带来官方 AdvancedLogDxe（Tools -> 二维码日志导出）。
           cp -R overlay/UniXNUPkg/. Mu-Silicium/Platforms/Xiaomi/UniXNUPkg/
+          test -f Mu-Silicium/Platforms/Xiaomi/UniXNUPkg/Driver/AdvancedLogDxe/AdvancedLogDxe.inf
           # 构建前断言：无条件 ConnectAll 确实进了构建树，避免 overlay 失效。
           grep -q '^  UniXNUConnectAll ();' \
             Mu-Silicium/Platforms/Xiaomi/UniXNUPkg/Library/UniXNULib/Main.c

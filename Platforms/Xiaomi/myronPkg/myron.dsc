@@ -128,6 +128,53 @@
   #
   UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
 
+  #
+  # Advanced Logger (official UniXNU Tools -> Advanced Logger QR export).
+  # These are new library classes; none overrides an existing mapping.
+  #
+  AssertLib|AdvLoggerPkg/Library/AssertLib/AssertLib.inf
+  AdvancedLoggerHdwPortLib|AdvLoggerPkg/Library/AdvancedLoggerHdwPortLibNull/AdvancedLoggerHdwPortLibNull.inf
+  AdvancedLoggerAccessLib|AdvLoggerPkg/Library/AdvancedLoggerAccessLib/AdvancedLoggerAccessLib.inf
+  DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
+  QrEncoderLib|MsGraphicsPkg/Library/QrEncoderLib/QrEncoderLib.inf
+
+
+#
+# Advanced Logger, DXE Only mode (AdvLoggerPkg/Docs/ReadMe.md).
+# Only DXE-phase modules route DEBUG() into the in-memory log; SEC keeps its
+# serial/screen logger so the earliest boot path is untouched.
+# The NULL class is the Mu-standard way to link the DxeCore instance into
+# DxeMain.inf, which otherwise does not list AdvancedLoggerLib. Its constructor
+# allocates the buffer and installs gAdvancedLoggerProtocolGuid.
+#
+[LibraryClasses.common.DXE_CORE]
+  # DxeMain.inf does not list AdvancedLoggerLib, so the NULL class is the only
+  # way to link the DxeCore instance. Keep DxeCore's own DebugLib unchanged:
+  # its constructor allocates the buffer and installs the protocol, while the
+  # modules we actually want to hear from are the DXE drivers below.
+  NULL|AdvLoggerPkg/Library/AdvancedLoggerLib/DxeCore/AdvancedLoggerLib.inf
+  VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
+
+[LibraryClasses.common.DXE_DRIVER, LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION]
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/Dxe/AdvancedLoggerLib.inf
+
+[LibraryClasses.common.DXE_RUNTIME_DRIVER]
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/Runtime/AdvancedLoggerLib.inf
+
+[PcdsFeatureFlag.common]
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerLocator|FALSE
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerFixedInRAM|FALSE
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerAutoWrapEnable|TRUE
+
+[PcdsFixedAtBuild.common]
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerBase|0x0
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerPages|1024
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerPreMemPages|24
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerHdwPortDebugPrintErrorLevel|0xFFFFFFFF
+  gUniXNUPkgTokenSpaceGuid.PcdUniXNUDeviceModel|"myron"
+
 [Components]
   #
   # Device tree. Mu derives the DtbExtension address by scanning the stock UEFI
@@ -146,6 +193,7 @@
   #
   UniXNUPkg/Application/UniXNU/UniXNU.inf
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  UniXNUPkg/Driver/AdvancedLogDxe/AdvancedLogDxe.inf
   myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
   # 只编译不打包：这个 EFI 是 payload 卷里的启动条目，用来验证
   # 「菜单 -> 条目 -> 交接」这条链，不需要进固件卷。

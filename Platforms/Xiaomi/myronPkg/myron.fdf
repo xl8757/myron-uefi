@@ -98,6 +98,7 @@ READ_LOCK_STATUS   = TRUE
   # UniXNU
   INF UniXNUPkg/Application/UniXNU/UniXNU.inf
   INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  INF UniXNUPkg/Driver/AdvancedLogDxe/AdvancedLogDxe.inf
   INF myronPkg/Drivers/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
   # payload 卷：UniXNU 从文件系统卷里读 /EFI/UniXNU/unixnu.toml，而内存启动
   # 时装载器把它放到哪儿不由我们决定（实测 boot ramdisk 到不了菜单）。
