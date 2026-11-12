@@ -138,6 +138,79 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 #define RAMDISK_FALLBACK_BASE  0xA6F00000
 #define RAMDISK_FALLBACK_MAX   0x01000000
 
+//
+// Diagnostics for a board with no spare output channel: the console scrolls and
+// BDS clears it, so nothing printed during DXE survives long enough to read.
+// A timer redraws a few squares in the top-left corner of the panel instead,
+// over whatever is on screen, and the squares say which path published the
+// volume. One square: the firmware volume copy. Two: the loader's /chosen.
+// Three: the fixed address. A red square: the firmware volume lookup failed.
+//
+#define FB_BASE        0xFC800000ULL
+#define FB_STRIDE      4800
+#define FB_SQUARE      24
+#define FB_GAP         32
+#define FB_WHITE       0xFFFFFFFFU
+#define FB_RED         0xFFFF0000U
+
+STATIC UINTN   mMarkerCount;
+STATIC UINT32  mMarkerColor = FB_WHITE;
+
+STATIC
+VOID
+DrawSquares (
+  VOID
+  )
+{
+  UINT32  *Row;
+  UINTN   Index;
+  UINTN   X;
+  UINTN   Y;
+
+  if (mMarkerCount == 0) {
+    return;
+  }
+
+  for (Index = 0; Index < mMarkerCount; Index++) {
+    for (Y = 0; Y < FB_SQUARE; Y++) {
+      Row = (UINT32 *)(UINTN)(FB_BASE + (UINT64)Y * FB_STRIDE);
+      for (X = 0; X < FB_SQUARE; X++) {
+        Row[Index * FB_GAP + X] = mMarkerColor;
+      }
+    }
+  }
+}
+
+STATIC
+VOID
+EFIAPI
+MarkerTick (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  DrawSquares ();
+}
+
+STATIC
+VOID
+SetMarker (
+  IN UINTN   Count,
+  IN UINT32  Color
+  )
+{
+  EFI_EVENT  Event;
+
+  mMarkerCount = Count;
+  mMarkerColor = Color;
+  DrawSquares ();
+
+  Event = NULL;
+  if (!EFI_ERROR (gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_APPLICATION, MarkerTick, NULL, &Event))) {
+    gBS->SetTimer (Event, TimerPeriodic, 10000000);
+  }
+}
+
 STATIC
 VOID
 PublishRange (
@@ -220,6 +293,7 @@ PublishInitrd (
     return FALSE;
   }
 
+  SetMarker (2, FB_WHITE);
   PublishRange (Start, End);
   return TRUE;
 }
@@ -273,6 +347,7 @@ FatVolumeSize (
   return TRUE;
 }
 
+
 //
 // The payload volume embedded in the firmware volume (see myron.fdf). This is
 // the path that does not depend on the loader at all.
@@ -302,10 +377,12 @@ PublishPayloadVolume (
   Status = GetSectionFromAnyFv (&mPayloadVolumeGuid, EFI_SECTION_RAW, 0, &Data, &Size);
   if (EFI_ERROR (Status) || (Data == NULL) || (Size == 0)) {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no payload volume in the FV: %r\n", Status));
+    SetMarker (1, FB_RED);
     return FALSE;
   }
 
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: payload volume at 0x%lx, %lu bytes\n", (UINT64)(UINTN)Data, (UINT64)Size));
+  SetMarker (1, FB_WHITE);
   PublishRange ((UINT64)(UINTN)Data, (UINT64)(UINTN)Data + Size);
   return TRUE;
 }
