@@ -198,6 +198,43 @@ def build_fat(files: dict, total_sectors: int, cluster_sectors: int = 1) -> byte
     return fs.finalize()
 
 
+def repack_fd(boot: Path, fd: Path, out: Path) -> None:
+    """Swap the FD inside gzip(BootShim + FD) and keep the appended DTB."""
+    data = boot.read_bytes()
+    if data[:8] != b"ANDROID!":
+        raise SystemExit("不是 Android 启动镜像")
+    ks, _ka, rs, _ra, ss, _sa, _ta, page = struct.unpack_from("<8I", data, 8)
+    kernel = data[page:page + ks]
+
+    engine = zlib.decompressobj(31)
+    body = engine.decompress(kernel) + engine.flush()
+    trailing = engine.unused_data
+    sig = body.find(b"_FVH")
+    if sig < 40:
+        raise SystemExit("kernel 载荷里找不到固件卷头")
+    fd_off = sig - 40
+
+    new_fd = fd.read_bytes()
+    if len(new_fd) != 0x300000:
+        raise SystemExit("FD 必须是 0x300000 字节，实得 %d" % len(new_fd))
+    new_kernel = gzip.compress(body[:fd_off] + new_fd, compresslevel=6, mtime=0) + trailing
+
+    rd_off = page + ((ks + page - 1) // page) * page
+    second_off = rd_off + ((rs + page - 1) // page) * page
+    ramdisk = data[rd_off:rd_off + rs]
+    second = data[second_off:second_off + ss]
+
+    header = bytearray(data[:page])
+    struct.pack_into("<I", header, 8, len(new_kernel))
+    blob = bytearray(header)
+    for part in (new_kernel, ramdisk, second):
+        blob += part
+        blob += b"\0" * ((-len(part)) % page)
+    out.write_bytes(bytes(blob))
+    print("boot.img 内嵌 FD 已替换: kernel %d -> %d 字节, shim %d 字节"
+          % (ks, len(new_kernel), fd_off))
+
+
 def make_sparse(out: Path, src: Path | None, total: int, placeholder: bool) -> None:
     """UXSP magic + total length + used length + used prefix of the volume."""
     if placeholder:
