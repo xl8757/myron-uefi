@@ -195,6 +195,23 @@ jobs:
           sha256sum "$img" BootShim/BootShim.bin
           cp "$img" BootShim/../myron-boot.img
 
+      # 菜单读的是某个文件系统卷里的 /EFI/UniXNU/unixnu.toml，而 build_uefi.py
+      # 只会把 Resources/ramdisk 原样打进 boot.img（原本是 5 字节占位）。
+      # HelloPayload 由同一次构建产出，所以这里在构建之后重打包，而不是抢在它之前。
+      - name: payload ramdisk
+        run: |
+          efi=$(find Mu-Silicium/Build -name HelloPayload.efi -print -quit)
+          test -n "$efi" || { echo "没找到 HelloPayload.efi"; exit 1; }
+          ls -l "$efi"
+          python3 tools/make_payload.py fat --out Resources/payload/payload.img --size-kib 1024 \
+            --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu.toml" \
+            --add "PAYLOADS/HELLO.EFI=$efi"
+          python3 tools/make_payload.py repack --boot Mu-Silicium/myron-boot.img \
+            --ramdisk Resources/payload/payload.img --out Mu-Silicium/boot-with-payload.img
+          mv Mu-Silicium/boot-with-payload.img Mu-Silicium/myron-boot.img
+          python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
+            --img Mu-Silicium/myron-boot.img
+
       - uses: actions/upload-artifact@v4
         with:
           name: uefi-myron

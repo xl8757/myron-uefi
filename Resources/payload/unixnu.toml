@@ -1,0 +1,17 @@
+# 最小可启动 payload：证明 UniXNU 菜单 -> 条目 -> 交接 这条链是通的。
+# 文件名全部用 8.3（卷里没有长文件名条目），FAT 不区分大小写。
+version = 1
+
+[boot]
+timeout = 30
+default = "hello"
+rotate = 3
+
+[ui]
+title = "UniXNU"
+
+[[entry]]
+id = "hello"
+title = "Hello payload"
+type = "efi"
+path = "PAYLOADS/HELLO.EFI"
