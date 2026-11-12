@@ -22,6 +22,7 @@
 
 #include <Uefi.h>
 #include <Protocol/GraphicsOutput.h>
+#include <Protocol/SimpleFileSystem.h>
 #include <Protocol/UniXNUMenuPlugin.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
@@ -32,6 +33,68 @@
 
 STATIC BOOLEAN  mStarted = FALSE;
 STATIC UINTN    mTicks   = 0;
+
+//
+// One-shot snapshot of the file-system view, printed into the official Advanced
+// Logger just before the QR viewer starts. With the log channel finally usable
+// this answers "is there a SimpleFileSystem at all" and "does the 8.3 config
+// path open", without spending another boot on guessing.
+//
+STATIC
+VOID
+ReportVolumes (
+  VOID
+  )
+{
+  EFI_STATUS                       Status;
+  EFI_HANDLE                       *Handles;
+  UINTN                            Count;
+  UINTN                            Index;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *Fs;
+  EFI_FILE_PROTOCOL                *Root;
+  EFI_FILE_PROTOCOL                *File;
+
+  Handles = NULL;
+  Count   = 0;
+  Status  = gBS->LocateHandleBuffer (
+                   ByProtocol,
+                   &gEfiSimpleFileSystemProtocolGuid,
+                   NULL,
+                   &Count,
+                   &Handles
+                   );
+  DEBUG ((DEBUG_ERROR, "AUTOLOG: SimpleFileSystem handle count %u (%r)\n", (UINT32)Count, Status));
+  if (EFI_ERROR (Status) || (Count == 0)) {
+    return;
+  }
+
+  for (Index = 0; Index < Count; Index++) {
+    Status = gBS->HandleProtocol (
+                    Handles[Index],
+                    &gEfiSimpleFileSystemProtocolGuid,
+                    (VOID **)&Fs
+                    );
+    if (EFI_ERROR (Status) || (Fs == NULL)) {
+      continue;
+    }
+
+    Status = Fs->OpenVolume (Fs, &Root);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "AUTOLOG: volume %u OpenVolume %r\n", (UINT32)Index, Status));
+      continue;
+    }
+
+    Status = Root->Open (Root, &File, L"\\EFI\\UniXNU\\unixnu.tom", EFI_FILE_MODE_READ, 0);
+    DEBUG ((DEBUG_ERROR, "AUTOLOG: volume %u open unixnu.tom %r\n", (UINT32)Index, Status));
+    if (!EFI_ERROR (Status)) {
+      File->Close (File);
+    }
+
+    Root->Close (Root);
+  }
+
+  gBS->FreePool (Handles);
+}
 
 STATIC
 VOID
@@ -98,6 +161,7 @@ AutoLogTick (
   Content.X      = (Gop->Mode->Info->HorizontalResolution - Side) / 2;
   Content.Y      = (Gop->Mode->Info->VerticalResolution - Side) / 2;
 
+  ReportVolumes ();
   DEBUG ((DEBUG_ERROR, "AUTOLOG: starting official QR log viewer (%ux%u)\n",
           Content.Width, Content.Height));
   Plugin->Run (Plugin, Gop, &Content, NULL);

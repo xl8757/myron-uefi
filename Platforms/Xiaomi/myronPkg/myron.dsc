@@ -175,6 +175,17 @@
   gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerHdwPortDebugPrintErrorLevel|0xFFFFFFFF
   gUniXNUPkgTokenSpaceGuid.PcdUniXNUDeviceModel|"myron"
 
+  #
+  # The payload volume is a hand-built FAT12 image with 8.3 entries only and
+  # no long-file-name records. The default path ends in ".toml" (4-char
+  # extension): EnhancedFatDxe's FatCheckIs8Dot3Name() then marks it as a long
+  # name and searches LFN entries that do not exist, so UniXNUConfigLoad()
+  # never opens the config and reports "no boot entry found". A 3-char
+  # extension is a legal 8.3 short name and matches the on-volume UNIXNU.TOM
+  # entry directly (FAT name comparison is case-insensitive).
+  #
+  gUniXNUPkgTokenSpaceGuid.PcdUniXNUConfigPath|L"\\EFI\\UniXNU\\unixnu.tom"
+
 [Components]
   #
   # Device tree. Mu derives the DtbExtension address by scanning the stock UEFI

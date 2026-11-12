@@ -22,6 +22,7 @@
 
 [Protocols]
   gEfiGraphicsOutputProtocolGuid   ## CONSUMES
+  gEfiSimpleFileSystemProtocolGuid ## CONSUMES
   gUniXNUMenuPluginProtocolGuid    ## CONSUMES
 
 [Depex]
