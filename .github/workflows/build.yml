@@ -16,6 +16,10 @@ on:
         type: choice
         options: [full, none]
         default: full
+      keep:
+        description: "vendor=none 时仍要保留的厂商模块名（空格分隔），例如只放回按键驱动"
+        type: string
+        default: ""
       label:
         description: "实验标签，会进 release 名，便于区分版本"
         type: string
@@ -158,11 +162,13 @@ jobs:
           DISPLAY_MODE: ${{ inputs.display || 'simple' }}
           SKIP_MODULES: ${{ inputs.skip || '' }}
           VENDOR_MODE: ${{ inputs.vendor || 'full' }}
+          KEEP_MODULES: ${{ inputs.keep || '' }}
         run: |
           python3 tools/experiment.py \
             --pkg Mu-Silicium/Platforms/Xiaomi/myronPkg \
             --display "$DISPLAY_MODE" \
             --vendor "$VENDOR_MODE" \
+            --keep $KEEP_MODULES \
             --skip $SKIP_MODULES
 
       - name: build uefi

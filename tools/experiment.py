@@ -91,12 +91,46 @@ def drop_vendor(pkg: Path) -> None:
     print("vendor = none（共注释 %d 个厂商模块）" % total)
 
 
+def keep_vendor(pkg: Path, names) -> None:
+    """在被 drop_vendor 注释掉的模块里，把指定几个放回去。
+
+    没有任何厂商模块时 UEFI 能进 BDS，但菜单没有输入设备
+    （屏幕上 `Connect ConIn failed`）。按键驱动是唯一一个「缺了就没法操作」的，
+    所以支持逐个放回，而不是整层打开。
+    """
+    if not names:
+        return
+    total = 0
+    for inc in ("DXE.inc", "APRIORI.inc"):
+        p = pkg / "Include" / inc
+        if not p.is_file():
+            continue
+        out = []
+        for line in p.read_text(encoding="utf-8").splitlines(True):
+            s = line.strip()
+            if not s.startswith("#NOVENDOR INF "):
+                out.append(line)
+                continue
+            body = s[len("#NOVENDOR "):]
+            if any(("/%s/" % n in body) or ("/%s." % n in body) for n in names):
+                out.append("  " + body + "\n")
+                total += 1
+                continue
+            out.append(line)
+        p.write_text("".join(out), encoding="utf-8")
+    print("keep = %s（放回 %d 行）" % (" ".join(names), total))
+    if total == 0:
+        sys.exit("keep 指定的模块一个都没匹配到（拼写？）")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pkg", type=Path, required=True)
     ap.add_argument("--display", choices=("custom", "simple"), default="custom")
     ap.add_argument("--skip", nargs="*", default=[])
     ap.add_argument("--vendor", choices=("full", "none"), default="full")
+    ap.add_argument("--keep", nargs="*", default=[],
+                    help="vendor=none 时仍要保留的厂商模块名")
     a = ap.parse_args()
 
     if not (a.pkg / "myron.dsc").is_file():
@@ -106,6 +140,7 @@ def main() -> int:
     skip_modules(a.pkg, a.skip)
     if a.vendor == "none":
         drop_vendor(a.pkg)
+        keep_vendor(a.pkg, a.keep)
 
     print("\n--- 当前生效的显示相关行 ---")
     for line in (a.pkg / "myron.dsc").read_text(encoding="utf-8").splitlines():
