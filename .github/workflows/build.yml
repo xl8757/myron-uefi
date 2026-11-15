@@ -248,7 +248,10 @@ jobs:
           ls -l Mu-myron*.img BootShim/BootShim.bin
           fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。
-          test "$(stat -c %s "$fd")" -eq $((0x300000)) || { echo "FD 不是 0x300000 字节"; exit 1; }
+          want=$(python3 -c "import pathlib,tomllib;print(int(tomllib.loads(pathlib.Path('Resources/Configs/myron.toml').read_text())['uefi_fd']['size']))")
+          got=$(stat -c %s "$fd")
+          echo "FD $got bytes, config wants $want"
+          test "$got" -eq "$want" || { echo "::error title=FD size::FD is $got bytes, [uefi_fd] size is $want"; exit 1; }
           sha256sum "$fd"
           img=$(ls Mu-myron*.img | head -1)
           # 校验 shim 里确实带上了本次的两处修正（DAIF 屏蔽、跳转前 cache 同步），
