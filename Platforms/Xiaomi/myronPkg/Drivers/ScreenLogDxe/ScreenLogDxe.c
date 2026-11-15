@@ -510,16 +510,26 @@ ScreenLogDxeEntry (
   //
   // ConOut does not exist yet - GraphicsConsole binds it after this driver -
   // and the timer below never gets a chance once the vendor stack deadlocks.
-  // The protocol notify fires the moment ConOut appears, which is still ahead
-  // of EnvDxeEnhanced.
+  // RegisterProtocolNotify is the boot service behind
+  // EfiCreateProtocolNotifyEvent; using it directly keeps the driver off
+  // UefiLib. It fires the moment ConOut appears, still ahead of EnvDxeEnhanced.
   //
-  Registration = NULL;
-  Status = gBS->CreateProtocolNotifyEvent (
+  Event = NULL;
+  Status = gBS->CreateEvent (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
                   ConOutNotify,
                   NULL,
+                  &Event
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Registration = NULL;
+  Status = gBS->RegisterProtocolNotify (
                   &gEfiSimpleTextOutProtocolGuid,
+                  Event,
                   &Registration
                   );
   if (EFI_ERROR (Status)) {
