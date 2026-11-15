@@ -1,0 +1,43 @@
+## @file
+#  Mirror the Advanced Logger tail onto the framebuffer as plain text.
+#
+#  Runs first in APRIORI so that anything which later deadlocks - the vendor
+#  stack asserts inside a library constructor and never returns - still leaves
+#  the whole log on the panel instead of the five rows the UEFI console keeps.
+#  No GOP, no ConIn and no menu plugin are required: the 8x16 font from
+#  BootShim/ScreenFont.h is shared by relative include.
+#
+#  Copyright (c) 2026, myron port.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ScreenLogDxe
+  FILE_GUID                      = 3C6E2A4B-9D15-4F7E-8A21-B70C5E3D9A64
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ScreenLogDxeEntry
+
+[Sources]
+  ScreenLogDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  AdvLoggerPkg/AdvLoggerPkg.dec
+
+[LibraryClasses]
+  AdvancedLoggerAccessLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+#
+# Nothing to wait for: the log buffer exists as soon as AdvancedLoggerLib's
+# constructor has run, and APRIORI places this ahead of the vendor stack.
+#
+[Depex]
+  TRUE

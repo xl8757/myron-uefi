@@ -6,6 +6,11 @@ APRIORI DXE {
   # 交给整个厂商栈，晚一步这一轮就白跑。
   INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
 
+  # 必须早于厂商栈：EnvDxeEnhanced 会在库构造器里断言并死循环，那时屏幕上
+  # 只剩 UEFI 控制台那几行。这个驱动把 Advanced Logger 尾部直接刷进帧缓冲，
+  # 一次 ~160 行，冻住时拍一张照就能读完。
+  INF myronPkg/Drivers/ScreenLogDxe/ScreenLogDxe.inf
+
   INF Binaries/myron/EnvDxeEnhanced/EnvDxeEnhanced.inf
 
   INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf

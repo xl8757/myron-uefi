@@ -134,6 +134,9 @@ READ_LOCK_STATUS   = TRUE
   # 内存里没有原厂固件，扫描必然落空。改由我们自己的驱动把 ABL 传进来的树
   # 重新发布成 gEfiDtbExtensionHobGuid；这块 FREEFORM 是它的静态副本。
   INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
+  # 把 Advanced Logger 尾部刷到帧缓冲（~160 行）。排在厂商栈之前，这样即使
+  # EnvDxeEnhanced 死在构造器里，屏幕上也是完整日志而不是控制台那几行。
+  INF myronPkg/Drivers/ScreenLogDxe/ScreenLogDxe.inf
   FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
     SECTION RAW = myronPkg/FdtBlob/myron.dtb
     SECTION UI = "DeviceTreeBlob"
