@@ -257,22 +257,25 @@ jobs:
           stat -c %s "$fd"
           cp "$fd" myron-fd.fd
           shasum -a 256 myron-fd.fd | tee myron-fd.sha256
-          echo "=== 产物 ==="
-          # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
-          ls -l Mu-myron*.img BootShim/BootShim.bin
-          fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。
           want=$(python3 -c "import pathlib,tomllib;print(int(tomllib.loads(pathlib.Path('Resources/Configs/myron.toml').read_text())['uefi_fd']['size']))")
-          got=$(stat -c %s "$fd")
+          got=$(stat -c %s myron-fd.fd)
           echo "FD $got bytes, config wants $want"
           test "$got" -eq "$want" || { echo "::error title=FD size::FD is $got bytes, [uefi_fd] size is $want"; exit 1; }
-          sha256sum "$fd"
-          img=$(ls Mu-myron*.img | head -1)
-          # 校验 shim 里确实带上了本次的两处修正（DAIF 屏蔽、跳转前 cache 同步），
-          # 并核对 boot.img 的头部参数与解压后的载荷。
-          python3 ../tools/check_artifacts.py --shim BootShim/BootShim.bin --img "$img" --fd "$fd"
-          sha256sum "$img" BootShim/BootShim.bin
-          cp "$img" BootShim/../myron-boot.img
+          # boot.img 由 unixnu bootimg 用这份卷重新打包，build_uefi.py 自己那份
+          # 内嵌的是上一轮的卷、不能当依据，所以这里只核对 shim 与卷本身。
+          python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin
+          echo "=== 产物 ==="
+          ls -l Mu-Silicium/BootShim/BootShim.bin myron-fd.fd
+          # vendor DXE 是否真的进了卷：DXE.inc 引用了 Binaries/myron 的 40+ 个
+          # 模块，缺一个就会退回「Clock/ChipInfo/DDR/RAM Partition Not Found」。
+          n=$(grep -c "INF Binaries/myron/" Mu-Silicium/Platforms/Xiaomi/myronPkg/Include/DXE.inc)
+          echo "DXE.inc vendor modules: $n"
+          test "$n" -ge 40 || { echo "::error title=vendor modules::DXE.inc only lists $n vendor modules"; exit 1; }
+          for m in UFSDxe ChipInfo DALTLMM Qup; do
+            grep -q "Binaries/myron/$m/" Mu-Silicium/Platforms/Xiaomi/myronPkg/Include/DXE.inc \
+              || { echo "::error title=vendor modules::DXE.inc is missing $m"; exit 1; }
+          done
 
       # 菜单读的是某个文件系统卷里的 /EFI/UniXNU/unixnu.toml。内存启动时
       # 装载器把内存盘放哪儿不由我们决定（实测 /chosen 指到未映射的地址），
@@ -304,24 +307,20 @@ jobs:
           source ../venv/bin/activate
           python3 build_uefi.py -d myron -r "$BUILD_TYPE" || { echo "::warning title=build_uefi::artifact check failed (stale boot.img FD); the firmware volume on disk is authoritative"; }
           cd ..
-          # 第二次构建只增量重跑 GenFv：Build/ 下的 FD 更新了，但
-          # myron-boot.img 仍是第一次构建时内嵌的旧 FD。实测后果是设备读到
-          # 旧 unixnu.toml（timeout=30、相对路径），payload 卷的改动永远到
-          # 不了机器。把新 FD 换进 gzip(BootShim + FD) 并强制比对。
+          # 这次构建只增量重跑 GenFv，把 payload 卷的改动写进 Build/ 下的 FD。
+          # boot.img 不在这里修：`unixnu bootimg` 会用上面捕获的 myron-fd.fd
+          # 从头打一份，build_uefi.py 自己那份内嵌的是上一轮的卷。
           fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
-          python3 tools/make_payload.py refd --boot Mu-Silicium/myron-boot.img \
-            --fd "$fd" --out Mu-Silicium/myron-boot.img
-          ls -l Mu-Silicium/myron-boot.img
-          python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
-          # refd already replaced the embedded volume; the hash check compared the
-          # boot.img against the FD from the FIRST pass (the payload-volume build
-          # rewrites it afterwards), so it can never match once the FV grows. Treat
-          # the embedded volume as authoritative and only report both hashes.
-          python3 tools/check_artifacts.py --img Mu-Silicium/myron-boot.img --report-only || true
+          echo "rebuilt fd $(sha256sum "$fd" | cut -d' ' -f1) $(stat -c %s "$fd") bytes"
+          # 第二遍只改 payload 卷，体积必须仍是配置值，否则 shim 会搬进垃圾。
+          want=$(python3 -c "import pathlib,tomllib;print(int(tomllib.loads(pathlib.Path('Resources/Configs/myron.toml').read_text())['uefi_fd']['size']))")
+          got=$(stat -c %s "$fd")
+          test "$got" -eq "$want" || { echo "::error title=FD size::second pass produced $got bytes, expected $want"; exit 1; }
 
       # boot ramdisk 已被设备日志证伪：ABL 在 fastboot boot 时只搬 kernel 段
       # （x0=0、无 DTB），48 MiB ramdisk 从没被用过。大卷改由 FD 内的稀疏
-      # 副本在 DXE 阶段还原，所以这里不再 repack，boot.img 保持构建产物原样。
+      # 副本在 DXE 阶段还原。boot.img 一律由 `unixnu bootimg` 用发布的 FD
+      # 重新打包，build_uefi.py 产出的那份只当历史记录上传。
 
       - uses: actions/upload-artifact@v4
         with:

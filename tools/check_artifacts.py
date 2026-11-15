@@ -127,12 +127,15 @@ def check_boot_img(path: Path, expected_fd: Path | None = None) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--shim", type=Path, required=True)
-    ap.add_argument("--img", type=Path, required=True)
+    # boot.img is packed by `unixnu bootimg` from the published volume, so a build
+    # that only needs to validate the shim can pass --shim alone.
+    ap.add_argument("--img", type=Path, default=None)
     ap.add_argument("--fd", type=Path, default=None,
                     help="fail if the FD inside boot.img differs from this file")
     args = ap.parse_args()
     check_shim(args.shim)
-    check_boot_img(args.img, args.fd)
+    if args.img is not None:
+        check_boot_img(args.img, args.fd)
     print("PASS")
 
 
