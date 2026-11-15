@@ -28,6 +28,7 @@
 
 [LibraryClasses]
   DebugLib
+  DxeServicesLib
   HobLib
   UefiDriverEntryPoint
 

@@ -18,10 +18,18 @@
   that same address under the GUID the vendor drivers look for. It runs as the
   first DXE driver, ahead of EnvDxeEnhanced and the rest of the vendor stack.
 
+  x0 is 0 on the "fastboot boot" path - the ABL copies only the kernel section
+  and hands over no tree - so the entry-argument HOB is missing there too. The
+  FDF therefore carries myronPkg/FdtBlob/myron.dtb as a FREEFORM, and this
+  driver falls back to that copy whenever the live tree is unavailable. Without
+  the fallback the 2026-11-15 build with the vendor stack stopped at
+  "ASSERT_RETURN_ERROR (Status = Not Found)" in EnvDxeEnhanced's AutoGen.c.
+
 **/
 
 #include <Uefi.h>
 #include <Library/DebugLib.h>
+#include <Library/DxeServicesLib.h>
 #include <Library/HobLib.h>
 #include <Library/UefiLib.h>
 
@@ -30,6 +38,15 @@
 //
 STATIC CONST EFI_GUID  mEntryArgHobGuid = {
   0xDAEE82E6, 0x8090, 0x4E72, { 0xBF, 0xB9, 0x78, 0xC1, 0x3C, 0xD4, 0xE3, 0x59 }
+};
+
+//
+// The FDF carries myronPkg/FdtBlob/myron.dtb as this FREEFORM so the tree is
+// available even when ABL hands over nothing. "fastboot boot" is exactly that
+// case: the ABL copies only the kernel section and passes x0 = 0.
+//
+STATIC CONST EFI_GUID  mDeviceTreeBlobGuid = {
+  0x25462CDA, 0x221F, 0x47DF, { 0xAC, 0x1D, 0x25, 0x9C, 0xFA, 0xA4, 0xE3, 0x26 }
 };
 
 /**
@@ -109,27 +126,61 @@ DtbExtensionHobEntry (
   EFI_HOB_GUID_TYPE     *Hob;
   EFI_PHYSICAL_ADDRESS  Dtb;
   EFI_PHYSICAL_ADDRESS  Existing;
+  VOID                  *Static;
+  UINTN                 StaticSize;
+  EFI_STATUS            Status;
 
   if (GetFirstGuidHob (&gEfiDtbExtensionHobGuid) != NULL) {
     DEBUG ((DEBUG_ERROR, "DTBHOB: DtbExtension already published, keeping it\n"));
     return EFI_SUCCESS;
   }
 
+  Dtb = 0;
   Hob = GetFirstGuidHob (&mEntryArgHobGuid);
   if (Hob == NULL) {
     DEBUG ((DEBUG_ERROR, "DTBHOB: no entry argument HOB, ABL passed no tree\n"));
-    return EFI_SUCCESS;
-  }
-
-  if (GET_GUID_HOB_DATA_SIZE (Hob) < sizeof (UINT64)) {
+  } else if (GET_GUID_HOB_DATA_SIZE (Hob) < sizeof (UINT64)) {
     DEBUG ((DEBUG_ERROR, "DTBHOB: entry argument HOB too small\n"));
-    return EFI_SUCCESS;
+  } else {
+    Dtb = *(CONST UINT64 *)GET_GUID_HOB_DATA (Hob);
+    if (!IsDeviceTree (Dtb)) {
+      DEBUG ((DEBUG_ERROR, "DTBHOB: x0 0x%lx is not a device tree\n", Dtb));
+      Dtb = 0;
+    }
   }
 
-  Dtb = *(CONST UINT64 *)GET_GUID_HOB_DATA (Hob);
-  if (!IsDeviceTree (Dtb)) {
-    DEBUG ((DEBUG_ERROR, "DTBHOB: x0 0x%lx is not a device tree\n", Dtb));
-    return EFI_SUCCESS;
+  //
+  // x0 is 0 on every "fastboot boot" we have measured, so without this the
+  // whole vendor stack runs with no tree and the first driver asserts. Use the
+  // static copy the FV carries for exactly this case.
+  //
+  if (Dtb == 0) {
+    Static     = NULL;
+    StaticSize = 0;
+    Status     = GetSectionFromAnyFv (
+                   &mDeviceTreeBlobGuid,
+                   EFI_SECTION_RAW,
+                   0,
+                   &Static,
+                   &StaticSize
+                   );
+    if (EFI_ERROR (Status) || (Static == NULL) || (StaticSize == 0)) {
+      DEBUG ((DEBUG_ERROR, "DTBHOB: no FdtBlob copy in the FV either: %r\n", Status));
+      return EFI_SUCCESS;
+    }
+
+    Dtb = (EFI_PHYSICAL_ADDRESS)(UINTN)Static;
+    if (!IsDeviceTree (Dtb)) {
+      DEBUG ((DEBUG_ERROR, "DTBHOB: FV copy 0x%lx is not a device tree\n", Dtb));
+      return EFI_SUCCESS;
+    }
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "DTBHOB: using the FV copy at 0x%lx, %lu bytes\n",
+      Dtb,
+      (UINT64)StaticSize
+      ));
   }
 
   Existing = Dtb;
