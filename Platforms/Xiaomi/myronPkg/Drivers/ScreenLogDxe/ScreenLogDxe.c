@@ -121,6 +121,18 @@ FlushPending (
   mPendingLen = 0;
 }
 
+STATIC
+VOID
+IngestAdvancedLogger (
+  VOID
+  );
+
+STATIC
+VOID
+Render (
+  VOID
+  );
+
 /**
   ConOut wrapper: tee every console string into the ring, then forward it.
 
@@ -136,8 +148,9 @@ HookedOutputString (
   IN CHAR16                           *String
   )
 {
-  CHAR16  Ch;
-  CHAR16  *Walk;
+  CHAR16      Ch;
+  CHAR16      *Walk;
+  EFI_STATUS  Status;
 
   Walk = String;
   if (Walk != NULL) {
@@ -162,7 +175,19 @@ HookedOutputString (
   //
   // Forward the untouched pointer: the walk above only advanced a copy.
   //
-  return mOrigOutputString (This, String);
+  Status = mOrigOutputString (This, String);
+
+  //
+  // Then take the panel back. The vendor assert deadlocks with interrupts
+  // masked - the periodic timer never ran at all (tick stayed 0) - so the only
+  // reliable trigger is the console write the assert itself performs. Drawing
+  // after the real OutputString means the console's own glyphs can never
+  // overwrite what the ring shows.
+  //
+  IngestAdvancedLogger ();
+  Render ();
+
+  return Status;
 }
 
 STATIC
