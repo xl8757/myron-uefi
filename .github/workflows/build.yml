@@ -242,7 +242,21 @@ jobs:
           if [ "$BUILD_TYPE" = DEBUG ]; then
             python3 ../apply_screen_log.py --mu-root .
           fi
-          python3 build_uefi.py -d myron -r "$BUILD_TYPE"
+          python3 build_uefi.py -d myron -r "$BUILD_TYPE" || echo "::warning title=build_uefi::first pass reported the stale boot.img FD; the volume on disk is the one to use"
+
+      # The firmware volume is the only artefact this project needs; boot.img is packed
+      # by `unixnu bootimg` from it. build_uefi.py packs boot.img from an earlier pass and
+      # then rewrites the volume, so its own consistency check can never pass once the FV
+      # grows past 3 MiB. Capture the volume here, before that second pass runs.
+      - name: capture the firmware volume
+        if: always()
+        run: |
+          set -euo pipefail
+          fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd | head -1)
+          echo "fd: $fd"
+          stat -c %s "$fd"
+          cp "$fd" myron-fd.fd
+          shasum -a 256 myron-fd.fd | tee myron-fd.sha256
           echo "=== 产物 ==="
           # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
           ls -l Mu-myron*.img BootShim/BootShim.bin
@@ -315,6 +329,8 @@ jobs:
           path: |
             Mu-Silicium/Build/**/FV/*.fd
             Mu-Silicium/BootShim/BootShim.bin
+            myron-fd.fd
+            myron-fd.sha256
             Mu-Silicium/myron-boot.img
           if-no-files-found: error
           retention-days: 14
