@@ -206,8 +206,14 @@ jobs:
           set -euo pipefail
           python3 -m pip install --quiet --disable-pip-version-check uefi_firmware==1.16
           python3 fetch_vendor_inputs.py --mu-root Mu-Silicium
-          find Mu-Silicium/Platforms/Xiaomi/myronPkg/Binaries -name '*.inf' | wc -l
-          ls Mu-Silicium/Platforms/Xiaomi/myronPkg/Binaries/myron | head
+          # The script writes <mu-root>/Binaries/myron, which is what the FDF's
+          # "INF Binaries/myron/<name>/<name>.inf" resolves against WORKSPACE.
+          n=$(find Mu-Silicium/Binaries/myron -name '*.inf' | wc -l)
+          echo "generated $n .inf wrappers"
+          test "$n" -ge 40
+          for m in UFSDxe ClockDxe ChipInfoDxe DDRInfoDxe SmemDxe; do
+            test -f "Mu-Silicium/Binaries/myron/$m/$m.inf" && echo "  $m ok"
+          done
       # 实验开关：不改仓库、只改构建产物，用于定位复位点。
       - name: apply experiment knobs
         env:
