@@ -180,6 +180,20 @@ jobs:
           ls Mu-Silicium/BootShim
           sha256sum Mu-Silicium/Resources/DTBs/myron.dtb
 
+      # UniXNU needs the UFS host and PHY enabled: Android's bootloader turns them on
+      # in its own overlay, and under UniXNU nothing does, so IortDtDxe logs
+      # "Failed to Find UFS IORT Node!" and no UFS block device appears. Both the FDF
+      # RAW blob and the Resources copy are patched, because DtbExtensionHobDxe
+      # republishes the FdtBlob one when ABL passes no tree.
+      - name: enable UFS in the device tree
+        run: |
+          set -euo pipefail
+          for d in Platforms/Xiaomi/myronPkg/FdtBlob/myron.dtb Resources/DTBs/myron.dtb; do
+            [ -f "Mu-Silicium/$d" ] || continue
+            fdtput -t s "Mu-Silicium/$d" /soc/ufshc@1d84000 status okay
+            fdtput -t s "Mu-Silicium/$d" /soc/ufsphy_mem@1d80000 status okay
+            echo "$d: $(fdtget -t s "Mu-Silicium/$d" /soc/ufshc@1d84000 status) $(fdtget -t s "Mu-Silicium/$d" /soc/ufsphy_mem@1d80000 status)"
+          done
       # 实验开关：不改仓库、只改构建产物，用于定位复位点。
       - name: apply experiment knobs
         env:
