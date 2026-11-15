@@ -195,6 +195,13 @@
   myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
 
   #
+  # Whole-log framebuffer mirror. Merges the Advanced Logger with a ConOut tee
+  # and repaints at 1x, so a machine that deadlocks inside a vendor constructor
+  # still leaves the entire tail on the panel.
+  #
+  myronPkg/Drivers/ScreenLogDxe/ScreenLogDxe.inf
+
+  #
   # ACPI Tables
   #
   aston/AcpiTables.inf
