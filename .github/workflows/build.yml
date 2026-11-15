@@ -99,6 +99,18 @@ jobs:
           git -C Mu-Silicium submodule update --init --recursive --depth 1
           echo "mu at $(git -C Mu-Silicium rev-parse --short HEAD)"
 
+      # Binaries/myron is generated, not tracked: fetch_vendor_inputs.py verifies the
+      # pinned HyperOS package against Resources/vendor-inputs.json and writes the
+      # <name>.efi/.depex/.inf triples the DSC and FDF reference. Without it the
+      # platform has no Clock/ChipInfo/DDR/RAM-Partition/UFS providers, which is why
+      # the 2026-11-15 run logged four "Not Found" and deadlocked in spinlock.c:408.
+      - name: vendor DXE inputs
+        run: |
+          set -euo pipefail
+          ls -l Resources/vendor-inputs.json
+          python3 fetch_vendor_inputs.py --mu-root Mu-Silicium
+          find Mu-Silicium/Platforms/Xiaomi/myronPkg/Binaries -name '*.inf' | wc -l
+          ls Mu-Silicium/Platforms/Xiaomi/myronPkg/Binaries/myron | head
       - name: venv and nasm shim
         run: |
           D=Mu-Silicium/Mu_Basecore/BaseTools/Bin/mu_nasm_extdep
