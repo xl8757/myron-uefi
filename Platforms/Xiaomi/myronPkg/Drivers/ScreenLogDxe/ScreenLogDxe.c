@@ -1,28 +1,26 @@
 /** @file
-  Mirror the Advanced Logger tail onto the framebuffer as plain text.
+  Put the whole boot log on the framebuffer, whatever produced it.
 
-  The board has no UART and the UEFI console only keeps a handful of rows, so a
-  driver that asserts in its constructor left us photographing five lines at a
-  time and guessing at the rest. The Advanced Logger already holds the whole
-  boot log - every Mu line and every vendor line - but it is only exported when
-  the UniXNU menu hands the panel to the QR plugin, which is far too late for
-  anything that dies during DXE dispatch.
+  The board has no UART, so a driver that asserts inside a library constructor
+  left us photographing five console rows and guessing at the rest. Worse, the
+  two log channels do not overlap: Mu's DEBUG goes to the Advanced Logger only
+  (a scan of a captured log shows zero "InstallProtocolInterface" lines), while
+  the vendor binaries write straight to ConOut. Reading one of them explains
+  half the boot and none of the failure.
 
-  This driver needs nothing: no GOP, no ConIn, no menu plugin. It renders the
-  tail of the log straight into the framebuffer at 0xfc800000 with the same
-  8x16 font the SEC screen log uses. At 1x scale that is ~140 columns by ~160
-  rows, so a single photograph carries the whole tail instead of five lines.
-
-  It runs first in APRIORI - ahead of EnvDxeEnhanced and the rest of the vendor
-  stack - and redraws on a short periodic timer. If the machine then deadlocks
-  inside a vendor constructor the screen already holds everything logged up to
-  that point, and further ticks fill in the rest whenever interrupts survive.
+  This driver merges both into one ring and paints it at 1x scale with the SEC
+  font - about 140 columns by 160 rows - straight into 0xfc800000. It needs no
+  GOP, no ConIn and no menu plugin, and APRIORI runs it ahead of EnvDxeEnhanced,
+  so when that driver deadlocks in its constructor the panel already holds every
+  line logged up to that point. A 250 ms tick keeps filling it in whenever
+  interrupts survive the deadlock.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Uefi.h>
 #include <Protocol/AdvancedLogger.h>
+#include <Protocol/SimpleTextOut.h>
 #include <Library/AdvancedLoggerAccessLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -47,19 +45,147 @@
 #define BG        0xff102040U
 #define FG        0xffffffffU
 #define BANNER_FG 0xff30d0ffU
+#define HOOK_FG   0xff80ff80U
 
 #define TICK_250MS  2500000ULL
 
 //
-// 8x16 bitmap font, ASCII 0x20-0x7e. The SEC screen log already carries one
-// copy; pulling it in by relative path keeps a single source of truth.
+// Shared with the SEC screen log by relative include - one font, one source.
 //
 #include "../../../../../BootShim/ScreenFont.h"
 
-STATIC UINTN  mTicks      = 0;
-STATIC UINTN  mLastBytes  = 0;
-STATIC UINTN  mStallTicks = 0;
+//
+// Merged line ring. Fixed size on purpose: this driver must not allocate
+// before the machine has proved it can survive long enough to need memory.
+//
+#define RING_LINES  256
 
+STATIC CHAR8  mRing[RING_LINES][LOG_COLS + 1];
+STATIC UINTN  mRingHead;
+STATIC UINTN  mRingCount;
+STATIC UINTN  mTotalLines;
+
+STATIC UINTN  mTicks;
+STATIC UINTN  mStallTicks;
+STATIC UINTN  mLoggerLinesRead;
+
+//
+// ConOut capture. The vendor DebugLib is prebuilt and writes here; nothing in
+// the Advanced Logger ever sees it.
+//
+STATIC EFI_TEXT_STRING                    mOrigOutputString;
+STATIC EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL    *mHookedConOut;
+STATIC CHAR8                              mPending[LOG_COLS + 1];
+STATIC UINTN                              mPendingLen;
+
+STATIC
+VOID
+PushLine (
+  IN CONST CHAR8  *Text,
+  IN UINTN        Length
+  )
+{
+  if (Length == 0) {
+    return;
+  }
+
+  if (Length > LOG_COLS) {
+    Length = LOG_COLS;
+  }
+
+  CopyMem (mRing[mRingHead], Text, Length);
+  mRing[mRingHead][Length] = '\0';
+
+  mRingHead = (mRingHead + 1) % RING_LINES;
+  if (mRingCount < RING_LINES) {
+    mRingCount++;
+  }
+
+  mTotalLines++;
+}
+
+STATIC
+VOID
+FlushPending (
+  VOID
+  )
+{
+  while ((mPendingLen > 0) &&
+         ((mPending[mPendingLen - 1] == '\n') || (mPending[mPendingLen - 1] == '\r')))
+  {
+    mPending[--mPendingLen] = '\0';
+  }
+
+  PushLine (mPending, mPendingLen);
+  mPendingLen = 0;
+}
+
+/**
+  ConOut wrapper: tee every console string into the ring, then forward it.
+
+  The vendor assert happens at an arbitrary TPL inside a library constructor,
+  so this must stay allocation-free and must never fail loudly.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+HookedOutputString (
+  IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
+  IN CHAR16                           *String
+  )
+{
+  CHAR16  Ch;
+  CHAR16  *Walk;
+
+  Walk = String;
+  if (Walk != NULL) {
+    while ((Ch = *Walk++) != L'\0') {
+      if (Ch == L'\n') {
+        FlushPending ();
+      } else if (Ch == L'\r') {
+        //
+        // ConOut sends "\r\n"; the \n does the real work.
+        //
+        continue;
+      } else if (mPendingLen < LOG_COLS) {
+        if (Ch > 0x7e) {
+          Ch = L'?';
+        }
+
+        mPending[mPendingLen++] = (CHAR8)Ch;
+      }
+    }
+  }
+
+  //
+  // Forward the untouched pointer: the walk above only advanced a copy.
+  //
+  return mOrigOutputString (This, String);
+}
+
+STATIC
+VOID
+HookConOut (
+  VOID
+  )
+{
+  if ((mHookedConOut != NULL) || (gST == NULL) || (gST->ConOut == NULL) ||
+      (gST->ConOut->OutputString == NULL))
+  {
+    return;
+  }
+
+  mHookedConOut      = gST->ConOut;
+  mOrigOutputString  = gST->ConOut->OutputString;
+  gST->ConOut->OutputString = HookedOutputString;
+
+  PushLine ("[screenlog] hooked ConOut -> vendor output is being captured", 58);
+}
+
+//
+// Pixel and text primitives. 1x scale: 144 columns by 160 rows fit the panel.
+//
 STATIC
 VOID
 PutPixel (
@@ -89,10 +215,6 @@ ClearScreen (
   }
 }
 
-/**
-  Draw one ASCII string at a cell row/column. Unknown bytes become '?'.
-
-**/
 STATIC
 VOID
 DrawText (
@@ -139,70 +261,32 @@ DrawText (
 }
 
 /**
-  Copy one Advanced Logger line into a fixed-width ASCII buffer.
+  Pull whatever is new in the Advanced Logger into the same ring.
 
-  @retval TRUE   Something was copied.
-  @retval FALSE  The line was empty.
-
-**/
-STATIC
-BOOLEAN
-CopyLine (
-  IN CONST ADVANCED_LOGGER_ACCESS_MESSAGE_LINE_ENTRY  *Line,
-  OUT CHAR8                                           *Buffer,
-  IN UINTN                                            BufferSize
-  )
-{
-  UINTN  Length;
-
-  if ((Line->Message == NULL) || (Line->MessageLen == 0) || (BufferSize < 2)) {
-    return FALSE;
-  }
-
-  Length = Line->MessageLen;
-  if (Length > BufferSize - 1) {
-    Length = BufferSize - 1;
-  }
-
-  CopyMem (Buffer, Line->Message, Length);
-  Buffer[Length] = '\0';
-
-  //
-  // Drop the trailing newline the formatter leaves behind.
-  //
-  while ((Length > 0) && ((Buffer[Length - 1] == '\n') || (Buffer[Length - 1] == '\r'))) {
-    Buffer[--Length] = '\0';
-  }
-
-  return Length > 0;
-}
-
-/**
-  Redraw the tail of the Advanced Logger onto the framebuffer.
+  Only Mu's own DEBUG lands there; the vendor console traffic is captured by
+  HookedOutputString. Merging both is the only way to see one coherent boot.
 
 **/
 STATIC
 VOID
-RenderLogTail (
+IngestAdvancedLogger (
   VOID
   )
 {
   ADVANCED_LOGGER_ACCESS_MESSAGE_LINE_ENTRY  Line;
   EFI_STATUS                                 Status;
-  CHAR8                                      Ring[LOG_ROWS][LOG_COLS + 1];
-  UINTN                                      Count;
-  UINTN                                      Head;
-  UINTN                                      Index;
-  UINTN                                      Row;
-  UINTN                                      TotalBytes;
-  CHAR8                                      Banner[96];
+  UINTN                                      Length;
+  UINTN                                      Seen;
 
-  ZeroMem (Ring, sizeof (Ring));
-  Count     = 0;
-  Head      = 0;
-  TotalBytes = 0;
-
+  //
+  // Restart from the top and skip what is already in the ring. The accessor
+  // keeps its own cursor; resetting keeps every tick deterministic instead of
+  // depending on where the previous tick stopped.
+  //
   ZeroMem (&Line, sizeof (Line));
+  AdvancedLoggerAccessLibReset (&Line);
+  Seen = 0;
+
   for ( ; ;) {
     Status = AdvancedLoggerAccessLibGetNextFormattedLine (&Line);
     if ((Status == EFI_END_OF_FILE) || EFI_ERROR (Status) ||
@@ -211,54 +295,63 @@ RenderLogTail (
       break;
     }
 
-    TotalBytes += Line.MessageLen;
-
-    if (CopyLine (&Line, Ring[Head], sizeof (Ring[0]))) {
-      Head = (Head + 1) % LOG_ROWS;
-      if (Count < LOG_ROWS) {
-        Count++;
-      }
+    Seen++;
+    if (Seen <= mLoggerLinesRead) {
+      continue;
     }
+
+    Length = Line.MessageLen;
+    while ((Length > 0) &&
+           ((Line.Message[Length - 1] == '\n') || (Line.Message[Length - 1] == '\r')))
+    {
+      Length--;
+    }
+
+    PushLine ((CONST CHAR8 *)Line.Message, Length);
+    mLoggerLinesRead = Seen;
   }
 
   AdvancedLoggerAccessLibReset (&Line);
+}
 
-  //
-  // Stall detection: a frozen log means the machine stopped emitting. That is
-  // the case this driver exists for, so say it out loud instead of leaving a
-  // silent screen that looks the same as a healthy one.
-  //
-  if (TotalBytes == mLastBytes) {
-    mStallTicks++;
-  } else {
-    mStallTicks = 0;
-    mLastBytes  = TotalBytes;
-  }
+STATIC
+VOID
+Render (
+  VOID
+  )
+{
+  UINTN   Index;
+  UINTN   Row;
+  UINTN   Source;
+  CHAR8   Banner[112];
+  UINT32  BodyRows;
 
   ClearScreen ();
 
   AsciiSPrint (
     Banner,
     sizeof (Banner),
-    "SCREENLOG  tick=%lu  lines=%lu  bytes=%lu  stall=%lu",
+    "SCREENLOG tick=%lu lines=%lu total=%lu logger=%lu stall=%lu conout=%a",
     (UINT64)mTicks,
-    (UINT64)Count,
-    (UINT64)TotalBytes,
-    (UINT64)mStallTicks
+    (UINT64)mRingCount,
+    (UINT64)mTotalLines,
+    (UINT64)mLoggerLinesRead,
+    (UINT64)mStallTicks,
+    (mHookedConOut != NULL) ? "hooked" : "waiting"
     );
-  DrawText (Banner, 0, 0, mStallTicks >= 4 ? BANNER_FG : FG);
+  DrawText (Banner, 0, 0, mStallTicks >= 8 ? BANNER_FG : FG);
 
-  if (mStallTicks >= 4) {
+  if (mStallTicks >= 8) {
     DrawText (">>> LOG STOPPED GROWING - this is where the machine is stuck <<<", 1, 0, BANNER_FG);
+    BodyRows = LOG_ROWS - 3;
+  } else {
+    BodyRows = LOG_ROWS - 2;
   }
 
-  //
-  // Ring[Head - Count .. Head) is chronological. Draw it from row 2 so the
-  // banner never gets scrolled away.
-  //
-  for (Index = 0; Index < Count; Index++) {
-    Row = (Head + LOG_ROWS - Count + Index) % LOG_ROWS;
-    DrawText (Ring[Row], Index + 2, 0, FG);
+  for (Index = 0; Index < mRingCount && Index < BodyRows; Index++) {
+    Source = (mRingHead + RING_LINES - mRingCount + Index) % RING_LINES;
+    Row    = Index + 2;
+    DrawText (mRing[Source], Row, 0, FG);
   }
 }
 
@@ -270,8 +363,25 @@ ScreenLogTick (
   IN VOID       *Context
   )
 {
+  UINTN  Before;
+
   mTicks++;
-  RenderLogTail ();
+  HookConOut ();
+
+  //
+  // mTotalLines covers both channels, so "no new lines anywhere" is the real
+  // signal that the machine stopped emitting.
+  //
+  Before = mTotalLines;
+  IngestAdvancedLogger ();
+
+  if (mTotalLines == Before) {
+    mStallTicks++;
+  } else {
+    mStallTicks = 0;
+  }
+
+  Render ();
 }
 
 EFI_STATUS
@@ -288,7 +398,9 @@ ScreenLogDxeEntry (
   // Paint once immediately: if the very next driver deadlocks in its
   // constructor, this is the only frame that will ever reach the panel.
   //
-  RenderLogTail ();
+  HookConOut ();
+  IngestAdvancedLogger ();
+  Render ();
 
   Event = NULL;
   Status = gBS->CreateEvent (
