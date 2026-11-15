@@ -188,6 +188,8 @@ jobs:
       - name: enable UFS in the device tree
         run: |
           set -euo pipefail
+          sudo apt-get install -y -qq device-tree-compiler
+          command -v fdtput
           for d in Platforms/Xiaomi/myronPkg/FdtBlob/myron.dtb Resources/DTBs/myron.dtb; do
             [ -f "Mu-Silicium/$d" ] || continue
             fdtput -t s "Mu-Silicium/$d" /soc/ufshc@1d84000 status okay
