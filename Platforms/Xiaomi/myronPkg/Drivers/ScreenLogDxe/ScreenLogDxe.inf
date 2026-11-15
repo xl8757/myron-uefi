@@ -34,6 +34,9 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
 
+[Protocols]
+  gEfiSimpleTextOutProtocolGuid   ## CONSUMES
+
 #
 # Nothing to wait for: the log buffer exists as soon as AdvancedLoggerLib's
 # constructor has run, and APRIORI places this ahead of the vendor stack.

@@ -209,6 +209,29 @@ HookConOut (
   PushLine ("[screenlog] hooked ConOut -> vendor output is being captured", 58);
 }
 
+/**
+  ConOut arrival notification.
+
+  The hook cannot be installed at entry time - this driver is first in APRIORI
+  and GraphicsConsole binds ConOut later - and the periodic timer never fires
+  because the vendor assert deadlocks with interrupts masked. The protocol
+  notify is the only thing that runs when ConOut actually appears, which is
+  before EnvDxeEnhanced is dispatched.
+
+**/
+STATIC
+VOID
+EFIAPI
+ConOutNotify (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  HookConOut ();
+  IngestAdvancedLogger ();
+  Render ();
+}
+
 //
 // Pixel and text primitives. 1x scale: 144 columns by 160 rows fit the panel.
 //
@@ -472,6 +495,7 @@ ScreenLogDxeEntry (
 {
   EFI_STATUS  Status;
   EFI_EVENT   Event;
+  VOID        *Registration;
 
   mSystemTable = SystemTable;
 
@@ -482,6 +506,25 @@ ScreenLogDxeEntry (
   HookConOut ();
   IngestAdvancedLogger ();
   Render ();
+
+  //
+  // ConOut does not exist yet - GraphicsConsole binds it after this driver -
+  // and the timer below never gets a chance once the vendor stack deadlocks.
+  // The protocol notify fires the moment ConOut appears, which is still ahead
+  // of EnvDxeEnhanced.
+  //
+  Registration = NULL;
+  Status = gBS->CreateProtocolNotifyEvent (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  ConOutNotify,
+                  NULL,
+                  &gEfiSimpleTextOutProtocolGuid,
+                  &Registration
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   Event = NULL;
   Status = gBS->CreateEvent (
