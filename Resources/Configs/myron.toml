@@ -15,7 +15,10 @@ requires_kernel_header = true
 #
 [uefi_fd]
 base = 0xA7100000
-size = 0x300000
+size = 0x800000   # 8 MiB: the vendor UFS chain (UFSDxe 176 KiB, ClockDxe 270 KiB,
+                  # ChipInfo/DDRInfo/Smem + their depex providers) does not fit in the
+                  # original 3 MiB. 0xA7100000 + 8 MiB = 0xA7900000, still below the
+                  # kernel's 0xA8000000 load address.
 
 #
 # Android Boot Image Kernel Configs
