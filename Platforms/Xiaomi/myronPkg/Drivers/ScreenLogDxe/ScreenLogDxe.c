@@ -25,7 +25,6 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 //
@@ -66,9 +65,10 @@ STATIC UINTN  mRingHead;
 STATIC UINTN  mRingCount;
 STATIC UINTN  mTotalLines;
 
-STATIC UINTN  mTicks;
-STATIC UINTN  mStallTicks;
-STATIC UINTN  mLoggerLinesRead;
+STATIC UINTN             mTicks;
+STATIC UINTN             mStallTicks;
+STATIC UINTN             mLoggerLinesRead;
+STATIC EFI_SYSTEM_TABLE  *mSystemTable;
 
 //
 // ConOut capture. The vendor DebugLib is prebuilt and writes here; nothing in
@@ -171,15 +171,15 @@ HookConOut (
   VOID
   )
 {
-  if ((mHookedConOut != NULL) || (gST == NULL) || (gST->ConOut == NULL) ||
-      (gST->ConOut->OutputString == NULL))
+  if ((mHookedConOut != NULL) || (mSystemTable == NULL) ||
+      (mSystemTable->ConOut == NULL) || (mSystemTable->ConOut->OutputString == NULL))
   {
     return;
   }
 
-  mHookedConOut      = gST->ConOut;
-  mOrigOutputString  = gST->ConOut->OutputString;
-  gST->ConOut->OutputString = HookedOutputString;
+  mHookedConOut     = mSystemTable->ConOut;
+  mOrigOutputString = mSystemTable->ConOut->OutputString;
+  mSystemTable->ConOut->OutputString = HookedOutputString;
 
   PushLine ("[screenlog] hooked ConOut -> vendor output is being captured", 58);
 }
@@ -315,6 +315,53 @@ IngestAdvancedLogger (
   AdvancedLoggerAccessLibReset (&Line);
 }
 
+/**
+  Append helpers for the banner. Deliberately not AsciiSPrint: this driver
+  must link with nothing beyond BaseLib and the logger accessor, and a missing
+  PrintLib mapping in the DSC is not worth a build round-trip.
+
+**/
+STATIC
+UINTN
+AppendStr (
+  OUT CHAR8        *Buffer,
+  IN  UINTN        Capacity,
+  IN  UINTN        At,
+  IN  CONST CHAR8  *Text
+  )
+{
+  while ((*Text != '\0') && (At + 1 < Capacity)) {
+    Buffer[At++] = *Text++;
+  }
+
+  return At;
+}
+
+STATIC
+UINTN
+AppendNum (
+  OUT CHAR8  *Buffer,
+  IN  UINTN  Capacity,
+  IN  UINTN  At,
+  IN  UINT64 Value
+  )
+{
+  CHAR8  Digits[24];
+  UINTN  Count;
+
+  Count = 0;
+  do {
+    Digits[Count++] = (CHAR8)('0' + (Value % 10));
+    Value /= 10;
+  } while ((Value != 0) && (Count < sizeof (Digits)));
+
+  while ((Count > 0) && (At + 1 < Capacity)) {
+    Buffer[At++] = Digits[--Count];
+  }
+
+  return At;
+}
+
 STATIC
 VOID
 Render (
@@ -324,22 +371,28 @@ Render (
   UINTN   Index;
   UINTN   Row;
   UINTN   Source;
-  CHAR8   Banner[112];
+  UINTN   At;
+  CHAR8   Banner[128];
   UINT32  BodyRows;
 
   ClearScreen ();
 
-  AsciiSPrint (
-    Banner,
-    sizeof (Banner),
-    "SCREENLOG tick=%lu lines=%lu total=%lu logger=%lu stall=%lu conout=%a",
-    (UINT64)mTicks,
-    (UINT64)mRingCount,
-    (UINT64)mTotalLines,
-    (UINT64)mLoggerLinesRead,
-    (UINT64)mStallTicks,
-    (mHookedConOut != NULL) ? "hooked" : "waiting"
-    );
+  At = 0;
+  At = AppendStr (Banner, sizeof (Banner), At, "SCREENLOG tick=");
+  At = AppendNum (Banner, sizeof (Banner), At, mTicks);
+  At = AppendStr (Banner, sizeof (Banner), At, " lines=");
+  At = AppendNum (Banner, sizeof (Banner), At, mRingCount);
+  At = AppendStr (Banner, sizeof (Banner), At, " total=");
+  At = AppendNum (Banner, sizeof (Banner), At, mTotalLines);
+  At = AppendStr (Banner, sizeof (Banner), At, " logger=");
+  At = AppendNum (Banner, sizeof (Banner), At, mLoggerLinesRead);
+  At = AppendStr (Banner, sizeof (Banner), At, " stall=");
+  At = AppendNum (Banner, sizeof (Banner), At, mStallTicks);
+  At = AppendStr (Banner, sizeof (Banner), At, " conout=");
+  At = AppendStr (Banner, sizeof (Banner), At,
+                   (mHookedConOut != NULL) ? "hooked" : "waiting");
+  Banner[At] = '\0';
+
   DrawText (Banner, 0, 0, mStallTicks >= 8 ? BANNER_FG : FG);
 
   if (mStallTicks >= 8) {
@@ -394,6 +447,8 @@ ScreenLogDxeEntry (
 {
   EFI_STATUS  Status;
   EFI_EVENT   Event;
+
+  mSystemTable = SystemTable;
 
   //
   // Paint once immediately: if the very next driver deadlocks in its
