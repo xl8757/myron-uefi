@@ -97,13 +97,42 @@ IsDeviceTree (
   UINT32 Struct = FdtWord (Base, 8);
   UINT32 Strings = FdtWord (Base, 12);
 
+  //
+  // Do NOT require off_dt_strings > off_dt_struct. The spec allows either
+  // order and dtc puts the struct block first, so that test rejected every
+  // real tree: myron.dtb has struct=0x38, strings=0x80eec. It is kept out on
+  // purpose - it is what silently stopped the fallback from publishing.
+  //
   if ((Total < 0x40) || (Struct < 0x28) || (Struct >= Total) ||
-      (Strings >= Total) || (Struct <= Strings))
+      (Strings >= Total))
   {
     return FALSE;
   }
 
   return TRUE;
+}
+
+/**
+  Stop where we stand when no device tree could be published.
+
+  The screen only keeps the last few lines, and the vendor stack would assert
+  in an unrelated-looking place anyway. Parking here with a banner means the
+  bottom of the screen always says which side of the problem we are on:
+  this banner means the tree never got out, anything else means it did.
+
+**/
+STATIC
+VOID
+NoTree (
+  VOID
+  )
+{
+  DEBUG ((DEBUG_ERROR, "\n\n"));
+  DEBUG ((DEBUG_ERROR, "**** DTBHOB: NO DEVICE TREE PUBLISHED ****\n"));
+  DEBUG ((DEBUG_ERROR, "**** vendor stack cannot run, parked ****\n"));
+  DEBUG ((DEBUG_ERROR, "\n\n"));
+  for ( ; ;) {
+  }
 }
 
 /**
@@ -166,12 +195,14 @@ DtbExtensionHobEntry (
                    );
     if (EFI_ERROR (Status) || (Static == NULL) || (StaticSize == 0)) {
       DEBUG ((DEBUG_ERROR, "DTBHOB: no FdtBlob copy in the FV either: %r\n", Status));
+      NoTree ();
       return EFI_SUCCESS;
     }
 
     Dtb = (EFI_PHYSICAL_ADDRESS)(UINTN)Static;
     if (!IsDeviceTree (Dtb)) {
       DEBUG ((DEBUG_ERROR, "DTBHOB: FV copy 0x%lx is not a device tree\n", Dtb));
+      NoTree ();
       return EFI_SUCCESS;
     }
 
