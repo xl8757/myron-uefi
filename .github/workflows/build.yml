@@ -108,6 +108,7 @@ jobs:
         run: |
           set -euo pipefail
           ls -l Resources/vendor-inputs.json
+          python3 -m pip install --quiet --disable-pip-version-check uefi_firmware==1.16
           python3 fetch_vendor_inputs.py --mu-root Mu-Silicium
           find Mu-Silicium/Platforms/Xiaomi/myronPkg/Binaries -name '*.inf' | wc -l
           ls Mu-Silicium/Platforms/Xiaomi/myronPkg/Binaries/myron | head
