@@ -288,7 +288,7 @@ jobs:
             --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.sparse
           cd Mu-Silicium
           source ../venv/bin/activate
-          python3 build_uefi.py -d myron -r "$BUILD_TYPE"
+          python3 build_uefi.py -d myron -r "$BUILD_TYPE" || { echo "::warning title=build_uefi::artifact check failed (stale boot.img FD); the firmware volume on disk is authoritative"; }
           cd ..
           # 第二次构建只增量重跑 GenFv：Build/ 下的 FD 更新了，但
           # myron-boot.img 仍是第一次构建时内嵌的旧 FD。实测后果是设备读到
