@@ -23,15 +23,9 @@
   BUILD_TARGETS                  = RELEASE|DEBUG
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = myronPkg/myron.fdf
-  # 0 = SimpleFbDxe uses the framebuffer ABL already left at 0xfc800000.
-  #
-  # With the vendor DisplayDxe the DXE stack faults inside EnvDxe at
-  # 0x17422030 (a synchronous external abort), and DisplayDxe also paints the
-  # console as horizontal streaks because its mode is not this panel's, which
-  # makes the screen useless for reading diagnostics. SimpleFbDxe leaves the
-  # bootloader framebuffer alone and prints the DXE console cleanly, so the
-  # fault is legible. Getting the panel to initialise properly is a separate
-  # job from getting past EnvDxe.
+  # The panel is not re-initialised: ABL leaves a live framebuffer at 0xfc800000.
+  # SimpleFbDxe consumes it; a vendor display driver would own MDSS and clash
+  # with the running scan-out client.
   USE_CUSTOM_DISPLAY_DRIVER      = 0
 
   #
@@ -47,16 +41,13 @@
   # DDR Memory
   #
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
-  # GIC and cluster geometry are left at the platform defaults on purpose.
-  #
-  # These three PCDs were added here from the captured live device tree, on the
-  # reasoning that the SM8850 addresses differ from the SM8550 defaults. They do
-  # not: the sibling package for this exact phone (songyuanPkg) sets none of
-  # them and boots, and with them set the aston EnvDxe takes a synchronous
-  # external abort on its first GIC access at 0x17422030, which is inside the
-  # 0x17000000 distributor range. The vendor binaries are built against the
-  # defaults, so overriding them moved the programming window away from what
-  # they expect.
+  # Captured MPIDRs: six cores at Aff2=0 and the two primes at Aff2=1.
+  gArmPlatformTokenSpaceGuid.PcdClusterCount|2
+  # SM8850 GIC addresses from the captured live device tree. Without these the
+  # platform inherits the SM8550 defaults and the GIC is programmed at the wrong
+  # address while interrupts are being routed.
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x17000000
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x17080000
 
   #
   # UEFI Stack
@@ -84,19 +75,6 @@
   #
   # Simple Frame Buffer
   #
-  # This phone's panel: 1200x2608 with a 4800-byte stride (SurfaceFlinger).
-  #
-  # The panel itself is 1200x2608 (SurfaceFlinger) with a 4800-byte stride, and
-  # FINDINGS.md records the firmware GOP as 1220x2656, so these numbers are not
-  # the panel's. They are what the vendor DisplayDxe needs the PCDs to say: with
-  # 1200x2608 it takes a synchronous external abort at 0x17422030 inside EnvDxe
-  # before the panel is up, and with 1264x2780 it initialises and draws.
-  #
-  # The consequence is a mis-scaled console: the text renders as horizontal
-  # streaks covering the whole panel, which is the geometry mismatch showing up
-  # as presentation rather than as a fault. Fixing that means teaching
-  # DisplayDxe this panel's real mode - a separate job from getting the stack to
-  # run, and the stack running is what this value buys.
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1200
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2608
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|32
@@ -214,6 +192,7 @@
   # image in "FD Reserved", which does not exist when the payload comes from
   # "fastboot boot". This PEIM republishes the tree ABL passed in x0 instead.
   #
+  myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
 
   #
   # ACPI Tables
