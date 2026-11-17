@@ -26,8 +26,14 @@ from uefi_firmware.uefi import FirmwareFile, FirmwareVolume
 ROOT = Path(__file__).resolve().parent
 URL = ('https://github.com/XiaomiFirmwareUpdaterReleases/firmware_xiaomi_myron/releases/download/'
        'stable-31.10.2025/fw_myron_myron-ota_full-OS3.0.13.0.WPMCNXM-user-16.0-18cc0bfb5e.zip')
-ZIP_SHA256 = '7c015caaff578399408b0f580ca0a8170ec964f3f69596399d36a1666e3edf73'
-IMAGE_SHA256 = 'e5b65a67fe6777d6fe6868cad23d842fd8486cbc5cef3a497b17bc9256ffc702'
+# The pins below are HyperOS 4.0.6.0 (OS4.0.6.0.WPMCNXM), the firmware this device
+# actually runs. They replace the 3.0.13.0 set the package originally pinned: that
+# image has 219 vendor inputs, this one 236, and 98 of the 216 shared binaries differ -
+# including DisplayDxe, which grew by 12288 bytes and is the driver the 23-second
+# reset was attributed to. URL above is kept for reference; --image is the supported
+# path now, because the 4.0.6.0 package is a local download.
+ZIP_SHA256 = 'd083b0ee0be62d6cf299575954512ca682a805c7264f1b6f677ab7feb5bc8f3f'
+IMAGE_SHA256 = '5a16c74bec9c014a14423066643e38956d93fdd416280df4243fad681f2111cd'
 
 
 def sha256(data):
