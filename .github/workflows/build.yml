@@ -29,6 +29,11 @@ on:
         type: choice
         options: [DEBUG, RELEASE]
         default: DEBUG
+      firmware:
+        description: "vendor input set: 4.0.6.0 is what the device runs; 3.0.13.0 is the control for the DXE entry-point ASSERT seen on hardware"
+        type: choice
+        options: ["4.0.6.0", "3.0.13.0"]
+        default: "4.0.6.0"
   push:
     paths:
       - 'Platforms/**'
@@ -111,9 +116,12 @@ jobs:
           venv/bin/pip install capstone
 
       - name: vendor inputs
+        env:
+          FW_VERSION: ${{ inputs.firmware || '4.0.6.0' }}
         run: |
           source venv/bin/activate
-          python fetch_vendor_inputs.py --mu-root Mu-Silicium
+          python fetch_vendor_inputs.py --mu-root Mu-Silicium --firmware "$FW_VERSION"
+          echo "firmware set: $FW_VERSION"
           ls Mu-Silicium/Binaries/myron | wc -l
 
       # Xiaomi 的预编译 DXE 是 DEBUG 构建，断言里烧死了 CpuDeadLoop：一个返回
