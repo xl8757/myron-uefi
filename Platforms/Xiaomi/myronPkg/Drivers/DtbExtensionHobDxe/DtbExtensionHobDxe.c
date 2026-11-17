@@ -243,9 +243,14 @@ DtbExtensionHobEntry (
   SayHex ("DTBHOB: tree size ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)Blob, 4));
 
   Address = (EFI_PHYSICAL_ADDRESS)(UINTN)Blob;
-  Status  = BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &Address, sizeof (Address));
-  if (EFI_ERROR (Status)) {
-    SayHex ("DTBHOB: BuildGuidDataHob failed, status ", (EFI_PHYSICAL_ADDRESS)Status);
+
+  //
+  // BuildGuidDataHob returns the HOB pointer, not an EFI_STATUS, and has no
+  // failure mode worth reporting; verify the HOB exists instead.
+  //
+  BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &Address, sizeof (Address));
+  if (GetFirstGuidHob (&gEfiDtbExtensionHobGuid) == NULL) {
+    Say ("DTBHOB: the HOB did not appear after building it");
     return EFI_SUCCESS;
   }
 
