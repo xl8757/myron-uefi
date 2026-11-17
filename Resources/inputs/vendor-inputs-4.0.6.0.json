@@ -1,0 +1,1890 @@
+{
+  "ASN1X509Dxe": {
+    "depex_sha256": null,
+    "guid": "c2f9a4f5-f7b4-43e7-ba99-5ea804cc103a",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "700d1baff677d82a4a10b3e3131e08281580a282e2648161880468c541282c60",
+    "size": 40960
+  },
+  "AbSlotDxe": {
+    "depex_sha256": "55ef10b4f62dbfc49dc7f4cb319343d32ed208bd74be85945559250ff86c18ed",
+    "guid": "9a7a7db4-614b-4a08-3df9-006f49b0d80c",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "fd08c7a422a9eff5e783542a66141f52a8680b79cef0ae2d573bfc583dc8054d",
+    "size": 28672
+  },
+  "AndroidDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "8e3ff05d-38a5-4c2e-98c9-0ecf4b3f8777",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "85f93df24139ebd757854f8ffac8953c2b5c711275a68ec88e4bccd7f33c07dd",
+    "size": 172032
+  },
+  "ArmCpuDxe": {
+    "depex_sha256": "2396b0cca0e8b84a09f16f0866c3299b8a781f7464fc0f0df293addc9f76d938",
+    "guid": "b8d9777e-d72a-451f-9bdb-bafb52a68415",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4d3cc04b97774c46606761d23b47bdc40c2beb0acbbeb9a5b1e107bc872b802e",
+    "size": 61440
+  },
+  "ArmGicDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "de371f7c-dec4-4d21-adf1-593abcc15882",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "e2712db61ccf02a5ff8189c690bb270f63f68b24f89d4de0b061ede065432d7a",
+    "size": 36864
+  },
+  "ArmTimerDxe": {
+    "depex_sha256": "385684677f71647e47ff8f816d300c9bf548a995dfd9e6c99031d65bdc465385",
+    "guid": "49ea041e-6752-42ca-b0b1-7344fe2546b7",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a6eb03723f3cea4c46f8fcfbc3103c387b2dff692013b4cbf98b855f4b11b29f",
+    "size": 28672
+  },
+  "BDS_Menu.cfg": {
+    "depex_sha256": null,
+    "guid": "a91d838e-a5fa-4138-825d-455e2303079e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b68f17fb0357c31c5ccb37a1abc90815982a6681193a943b1e27460a0197221d",
+    "size": 2947
+  },
+  "BootTimeDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "68bfa1e6-d974-012b-84b5-4003384b78ad",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "81ded6e0505029f6d72ad0ff2446f8172c6a41278d7a6125db2346bd3f256e31",
+    "size": 32768
+  },
+  "ButtonsDxe": {
+    "depex_sha256": "202ad9811555d98efa58563c98a3b90e94d76630feb68f92c8d7a63c46998d9d",
+    "guid": "5bd181db-0487-4f1a-ae73-820e165611b3",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7e7c930feacb309663d123fbd71ecd8158457aeddf92e5be1834c9d7b0634ccd",
+    "size": 40960
+  },
+  "CPRDxe": {
+    "depex_sha256": "4222f37e19a4b252aa185240a267b613ee5e464543e682f222a21fea7c0ed2a2",
+    "guid": "1b52138d-3fa3-4e50-b958-20887353f809",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "6740b9a5ba3e940e3a680e668f4cf5991b680d8b2f5e8beef33c93bb08a104cc",
+    "size": 86016
+  },
+  "CalibrationDxe": {
+    "depex_sha256": "198572dfc095ac01549eb5cc56e7eabe5a516f7053e5793324c93a4a737753c3",
+    "guid": "32f19685-046b-4f36-a328-7a87ded96fd9",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "119cbeeb317fe891f4694a994cfd36a7ba5fef3c281381c0724f1b39b941f82d",
+    "size": 49152
+  },
+  "CapsuleRuntimeDxe": {
+    "depex_sha256": "95ac118515bbda12a240f7ae06e821ac58cb51797d5092ca6017936ef6f69ba4",
+    "guid": "42857f0a-13f2-4b21-8a23-53d3f714b840",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "1507dce48b43b4dcc2f0828682bd3108078c42ca949b30b4a40054dc98d08446",
+    "size": 32768
+  },
+  "ChargerExDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "2e3042f3-2bb9-463f-8866-56d75b7c4ab0",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8dd1b2ee61dec68443285acfe89a2a5186c1888f8c00ebbe5301aca7656c7b5c",
+    "size": 36864
+  },
+  "ChipInfo": {
+    "depex_sha256": "5a2204901e9095761d883230974b7d3265bb85eb6eecfd02550ce4d17ec61802",
+    "guid": "10e193df-9966-44e7-b17c-59dd831e20fc",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "f6821aa55e4cd5347128a3f3d7587bb2b19bdbb07e846103330249c93fefb23c",
+    "size": 53248
+  },
+  "ClockDxe": {
+    "depex_sha256": "c8001e9cea134cf8205ad4167fd0ff3b8dab6ecf325c723158cc6916e4a9b1cf",
+    "guid": "4db5dea6-5302-4d1a-8a82-677a683b0d29",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a2379a3801337f7871caa77d90c9abdc7271cfe8e2031599d7b1c9d2db3b664f",
+    "size": 270336
+  },
+  "CmdDbDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "aba01ff8-2ccb-4e12-8b2e-cd3f4a742993",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "e66d2ba3a987783fd92f2837d24852fd63fff4587fc87b2f6945c885e047550a",
+    "size": 32768
+  },
+  "ConPlatformDxe": {
+    "depex_sha256": null,
+    "guid": "51ccf399-4fdf-4e55-a45b-e123f84d456a",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "91fcd039098e74edbd1c93f1bf01be3080855b22bcf8fa47d3b592bb3a7f34be",
+    "size": 40960
+  },
+  "ConSplitterDxe": {
+    "depex_sha256": null,
+    "guid": "408edcec-cf6d-477c-a5a8-b4844e3de281",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "88719565d0ff53ec75bd9294c49c38d0bcd41f3f3e07992d28eef19b02124c18",
+    "size": 53248
+  },
+  "DALSys": {
+    "depex_sha256": "445084b65f55991565be20b692e489f28006a91c3d0a050eae2a8eebdf12f563",
+    "guid": "8e9bd160-b184-11df-94e2-0800200c9a66",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3641f04c8488eb5c76f619e8c39e57a2a2a0386bbcc5b9aec4d344c9b033d4d1",
+    "size": 352256
+  },
+  "DALTLMM": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "8681cc5a-0df6-441e-b4b8-e915c538f067",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d77781d7f40a3ef0f400c48f9e74871ea57f4b3a13b8e0c2175a7eed797bf291",
+    "size": 49152
+  },
+  "DDRInfoDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "7db0793a-4402-4be1-906e-d0fabad2707e",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4a035025762b7cc1b26e6a2c9226af5f72497c0528d21e49d8d098f3e580bef4",
+    "size": 49152
+  },
+  "DevicePathDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "9b680fce-ad6b-4f3a-b60b-f59899003443",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "120e34d4011d7cbcb95e3d017672c168b0383cb88b145d8785685578e27cfbfc",
+    "size": 77824
+  },
+  "DiskIoDxe": {
+    "depex_sha256": null,
+    "guid": "6b38f7b4-ad98-40e9-9093-aca2b5a253c4",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "38eb5eb8622b472b592621c136932157237c3cc25df4ed079d1422debce463c6",
+    "size": 40960
+  },
+  "DisplayDxe": {
+    "depex_sha256": "1160a8a2f29f1ca18fa4b8384384536925bac48301e59f7235e43b0aff451b62",
+    "guid": "4138022f-06c7-4f79-9c94-7e33b511a4e7",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "62aa308532c44b22395ecbcd8c38a310d5bb93a2c5206d97e01ab07f6f6139e2",
+    "size": 454656
+  },
+  "DxeCore": {
+    "depex_sha256": null,
+    "guid": "d6a2cb7f-6a18-4e2f-b43b-9920a733700a",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ebad2a60c2ffa39ad807682276c753422e55806bda7b7f92cfa773fdda87be69",
+    "size": 212992
+  },
+  "EXFG": {
+    "depex_sha256": "44a8c9f466db74c73b325668a57fabe9fdf08e9eb22604a7cb5bf760ec45e3e5",
+    "guid": "0a6063f5-8fea-4c48-9143-911c2a8e7eb6",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "18a4b5e1df2fd40dae98c304fb3ab1f0c407daf71f580a5186cff85f74f632c7",
+    "size": 36864
+  },
+  "Ebl": {
+    "depex_sha256": null,
+    "guid": "3cef354a-3b7a-4519-ad70-72a134698311",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2fb3121dd92ad5beaa4586dfe3105149b6cc8d54e24cb58d9621b9d52dd79415",
+    "size": 118784
+  },
+  "EmbeddedMonotonicCounter": {
+    "depex_sha256": "f7126f1178fee554f86cfc02416cea9e34d816608cd6835ebf9f4251270f8171",
+    "guid": "37795ba0-e1cf-4ed5-bd8b-16df6bcb1e1a",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "6ed0a31696f019e0aa825bdfae75cee7a61c643d9f8e8061d974b59ab62f77d2",
+    "size": 32768
+  },
+  "EnglishDxe": {
+    "depex_sha256": null,
+    "guid": "cd3bafb6-50fb-4fe8-8e4e-ab74d2c1a600",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3868049185b18ef20e53568da9b7544c797526a31e3bde28c3641f7db4c41f02",
+    "size": 28672
+  },
+  "EnvDxeEnhanced": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "90a49afd-422f-08ae-9611-e788d3804845",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "88b4291f944c7b75775c96bdbb31606b1b6bae7f47a0a79a47bc9f7c4fd9ddfe",
+    "size": 77824
+  },
+  "ExLoadSw": {
+    "depex_sha256": "44a8c9f466db74c73b325668a57fabe9fdf08e9eb22604a7cb5bf760ec45e3e5",
+    "guid": "35a428b4-05ce-4603-995e-be83213fd545",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ff9bfb688dbf36945eb7f6474b689e61c5d86bf5bd5fbde51a4188f940d816b9",
+    "size": 32768
+  },
+  "FMFDxe": {
+    "depex_sha256": null,
+    "guid": "6b0f81ca-7c28-42fd-9132-03050ef78d63",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "52f5493259defee247f5a2b6382e04e64fd3f703c7fdda9d67b5133be435f223",
+    "size": 28672
+  },
+  "Fat": {
+    "depex_sha256": null,
+    "guid": "961578fe-b6b7-44c3-af35-6bc705cd2b1f",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "c80c6ab8631bf2d044e0baccc69119bd93c5bb8175363aef5d8d680bba7a38d8",
+    "size": 61440
+  },
+  "FeatureEnablerDxe": {
+    "depex_sha256": null,
+    "guid": "1c04f529-0612-4319-9315-b2e75c16810a",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "81c3a1c7bdb5f38bd0549381bed67264b163f123907e50677bc9f0d75c3a5488",
+    "size": 32768
+  },
+  "FvDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "e2534a24-1d9a-4a54-aaec-be8836d0f45d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8f228629efbd9c1b0aaf94ecfa41dd925582094b77411654fd9bd41196842fdb",
+    "size": 57344
+  },
+  "FvSimpleFileSystem": {
+    "depex_sha256": null,
+    "guid": "907125c0-a5f1-11e3-a3fe-a3198b49350c",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "1e279de32bed8808cd891715ff9c90ca53ca5e3a86de0d09491f6353f252c07a",
+    "size": 45056
+  },
+  "GlinkDxe": {
+    "depex_sha256": "bc412c7f953353ed9727ad256b3f5639b5424b8985f9cb2cd8201dff841b75a5",
+    "guid": "7942a7eb-b7d5-4e2e-b908-831e4de55b58",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "101db6507e4570d6774d8fadeb7de9f5ade2c4f0d870709702b82af151e68d57",
+    "size": 69632
+  },
+  "GpiDxe": {
+    "depex_sha256": "8d212b55931b8b7178a06d7d5ff305306299accdbd845743b3c58bdf2e62a45f",
+    "guid": "569ea0de-b557-4043-84cf-01103fe516e5",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "69947b609d34c76160f4172365842ae285768119ce54a42d1ea72bd859fa4892",
+    "size": 90112
+  },
+  "GraphicsConsoleDxe": {
+    "depex_sha256": null,
+    "guid": "cccb0c28-4b24-11d5-9a5a-0090273fc14d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "071f84263f8146faa12cd0be138a6692969998dfe4a5bbe9b0c3ec4cce387e4c",
+    "size": 45056
+  },
+  "HALIOMMU": {
+    "depex_sha256": "8d212b55931b8b7178a06d7d5ff305306299accdbd845743b3c58bdf2e62a45f",
+    "guid": "9a00771f-36d4-4dd5-8916-c48ed9b16b86",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "68cad8d02e0f24c66966f3fa9487db1e59aef921ce98366226ca4acf255c24a0",
+    "size": 53248
+  },
+  "HSUART": {
+    "depex_sha256": "27f3b12e3a69943637fb27fafde8b7fdc4e5da6798870c4d978634d6f77c1634",
+    "guid": "8c102bba-15a9-4c40-8599-6d0f5689da5b",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a84a24e56174a2de10f244f5e0a0717f64d2a8d8883b48eb322d9bc51354aa66",
+    "size": 65536
+  },
+  "HWIODxeDriver": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "af9763a2-033b-4109-8e17-56a98d380c92",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "c8d1a858fce054d5ebc3c9b52de0d8fb004f75c2b2b44db910b62fe4f1d91542",
+    "size": 32768
+  },
+  "HiiDatabase": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "348c4d62-bfbd-4882-9ece-c80bb1c4783b",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "aec92594fb5effdc40f79bade9eb6de9e526e51e340ee3a86580d20cd8c6ba12",
+    "size": 139264
+  },
+  "I2C": {
+    "depex_sha256": "44a8c9f466db74c73b325668a57fabe9fdf08e9eb22604a7cb5bf760ec45e3e5",
+    "guid": "04de8591-d2b3-4077-bbbe-b12070094eb6",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "652cc9699a385bc41e20c349f27aeee50624033043f6f1c60626ec9498dded5b",
+    "size": 122880
+  },
+  "I3CMaster": {
+    "depex_sha256": "c9dc87d9721566ca054ce323d5bc1a1ddd76c6917481772dcb4f135b7362f616",
+    "guid": "1c5705b3-1acd-46c6-9ac1-06ef0896da66",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b1a67bbc17bd1e617ae53812e8eeff51d1c778633b58a0813b9d954651e839da",
+    "size": 135168
+  },
+  "ICBDxe": {
+    "depex_sha256": "c8001e9cea134cf8205ad4167fd0ff3b8dab6ecf325c723158cc6916e4a9b1cf",
+    "guid": "5824f9de-17d2-4b1f-a5fe-5eb77fa53093",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "f0ad4e127a9babf1ffd1b15c12e87997da75e91c1f9543b74e0b1344732d3857",
+    "size": 221184
+  },
+  "IPCCDxe": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "42031f68-1f0b-429b-93f1-0eb0cf89ddbf",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "74886259271bc8172e3c5b213f1b6958bf14187f8459c1cf95698485ddac8359",
+    "size": 36864
+  },
+  "MailboxDxe": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "e3095547-34b8-4bd4-8d8f-c3223c30318d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3fae1089e451398a0cba1fca60fa0673b8bfbe570f3a86f4004bc856bbe02f0a",
+    "size": 45056
+  },
+  "MetronomeDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "4c6e0267-c77d-410d-8100-1495911a989d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "aa07045f21eec23848b3163638890c6e6e444759ea90054be3697c0646fa4fab",
+    "size": 28672
+  },
+  "MiTokenDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "068aae46-bdc6-4073-85d5-31c5eef19a15",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "886a0b7392062981665cc7a7de4870b2ded1e4f545b37f547cd00bc00af9e982",
+    "size": 40960
+  },
+  "NpaDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "cb29f4d1-7f37-4692-a416-93e82e219711",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "e795cbcbc4d54ec4b1cbf68241ebfaefb564d57d1aab316168c0c8960d612974",
+    "size": 77824
+  },
+  "PILDxe": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "1d317734-4083-47c6-83ea-e3a42f2a6bff",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "16a796bf7834cb55587a8c26e0f8f7cadc5fe02ba7fef998a6b05cdf70f9da85",
+    "size": 131072
+  },
+  "PILProxyDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "8cf9c920-d5e6-4dac-bef9-6e6a4eec7add",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "1c5d802365953a377c9133b86d6c5e27f6274105d4b415020da09342cb3381d5",
+    "size": 40960
+  },
+  "PanelSimConfig.csv": {
+    "depex_sha256": null,
+    "guid": "03e9256f-e621-48d8-8576-7e3b4fcf2d41",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "72ff87c5e3be7e310c0d54e3c31565f1d0fda3dd6deeb23df75ef7e091f56b89",
+    "size": 4725
+  },
+  "Panel_4001_41_02_0a_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "454a4f04-5722-4e7f-92ca-426a155d8f00",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2e6ca8334e3812a135ec088c05664dafc901fc46aa1ced19dce209f8dd0c7eeb",
+    "size": 5764
+  },
+  "Panel_ATHENS_42_0d_0a_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "00458bf3-3d5b-4402-ac28-cd752eecc4c0",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "cd3b217eff3dbe2fba58695f41de4a27ea77f779934c368d7ce975c4e2f6b96e",
+    "size": 5317
+  },
+  "Panel_ATHENS_42_0d_0a_p10_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "1abdb8e9-8cd9-43d2-adfd-4c48043096c8",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8b18d17e42ba888e2680acfac3b4abda52e73367e01070fcc021bbb9416eed45",
+    "size": 4941
+  },
+  "Panel_BYRON_42_0d_0a_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "fc1d0834-cd4e-4652-8671-1ef99e00c19d",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "f3361719fb024e6cd7a583cb709959d2d5445a32324920a87abab137d87592b1",
+    "size": 13026
+  },
+  "Panel_P11U_42_0d_0a_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "3d903b36-e824-284d-edcb-c3d4c9e5fa62",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "58887248a745c9a2b5ca55a319fcaad84b854f2c4e223a24c229ee5e320a08c1",
+    "size": 5249
+  },
+  "Panel_P11U_42_0d_0a_p00_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "9b379057-6111-4e09-a35e-cc366a3834b4",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "e145f631f8b53921c5ad68e4dea0c7a786138e2ed78fb013d56835d7fb721d85",
+    "size": 3859
+  },
+  "Panel_P11U_42_0d_0a_p01_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "ec20c99b-165e-4331-a1e7-b95954c2db4d",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7cffd3cede6cb4e82a8bb52fcd9ce15ed78567e17cc4752b55747f3b0f424487",
+    "size": 4614
+  },
+  "Panel_P11U_42_0d_0a_p1_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "87bd48c7-da5d-3198-4432-64ab90c94e58",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "be8340e028cbd472b38fe64854ed9764e31eff765e3eab6ea5edcfc9dad3c5de",
+    "size": 15720
+  },
+  "Panel_P1_42_02_0a_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "7a1480c7-5bec-4df7-a35b-ccd4cfc14504",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "19097e9ba08b64e2bb1e13d6cde38b98bd89c3c987d76f5bf8a9b905688af4e4",
+    "size": 14870
+  },
+  "Panel_P1_42_02_0a_p10_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "8a49fc8d-80fd-48d3-9003-be959f8b14d7",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "44b583bb04ca65436b05987520fb24d72c2e64f37c1f8ac9d4817c3dc9346903",
+    "size": 17351
+  },
+  "Panel_P1_42_02_0a_p11_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "7f131de0-3f70-4bb4-b6ca-c203a114b637",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "637c52a63538042060c18bdd490a02391bf69a980a099d0f13cadbcc9846d0bb",
+    "size": 18272
+  },
+  "Panel_P1_42_0D_0b_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "f8867a0a-72a5-4a80-91ae-f07ace3efdbf",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "fb949961f22c72fb6a5f5e5c1ae1387fd2a22a8aed36211134a959fdd606da2d",
+    "size": 5040
+  },
+  "Panel_P1_42_0D_0b_p10_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "53f4e9f3-a83b-4c34-a680-e218e860ae84",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3bb5167937da1fd4c8458ad378095bd1dc5caf80a0e8d12872c06f7155e5ae79",
+    "size": 21655
+  },
+  "Panel_P1_42_0D_0b_p11_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "7025e58f-cd65-4522-be48-d352da3c4f4e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "da89c5778a3b9853723fe76c82c13e6be7ddbc44170a64eeb0440a942d1622eb",
+    "size": 30483
+  },
+  "Panel_P1_42_0D_0b_p12_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "cb4ef5c0-33cb-4256-8710-5c693b72b746",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7c24fd51f4890f4fdb51959beebfd64d31680728aa9922515a14104d2c389605",
+    "size": 10399
+  },
+  "Panel_P1_42_0D_0b_p21_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "a336b765-8f6b-48ba-929b-b93a2670a294",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2295e42375858eec481d0e707a6096914501d618ad39be250d6ad852bab7490e",
+    "size": 13292
+  },
+  "Panel_P1_42_0D_0b_p2_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "cee60a5b-d49d-4f90-9306-91c0ec66360f",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "f13880cf2695e32d27978a851f63e215e31b5e9b079c5f7bf34e5973eb52ffe6",
+    "size": 17643
+  },
+  "Panel_P2_42_02_0a_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "3dd1276a-1a58-468d-a82c-1e7c90ece62b",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4ba719f9eb7289605dcc0148268417db0c5ea5b6db83cf367ab4adbbb204fdef",
+    "size": 9851
+  },
+  "Panel_P2_42_02_0a_p11_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "becf60a8-356e-11f0-aad7-03eae3b06f05",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "19097e9ba08b64e2bb1e13d6cde38b98bd89c3c987d76f5bf8a9b905688af4e4",
+    "size": 14870
+  },
+  "Panel_P2_42_02_0a_p12_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "07527848-4d0b-11f0-94d4-3beb7f81c8b1",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "c173d6071c8573ba6732279d225ab66abe8b95088460b3f45814b7f7d3b6ba75",
+    "size": 17351
+  },
+  "Panel_P2_42_02_0a_p2_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "10d29084-5caa-11f0-93bd-379a59c8481a",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b57ff442bf4dcb57d07067c62f6ee6363d0acc93be19f129c068edf7de3aac5c",
+    "size": 19843
+  },
+  "Panel_P2_42_06_0a_ltpo_dsc_cmd_sec.xml": {
+    "depex_sha256": null,
+    "guid": "9136a67a-889a-4cc4-bf54-ae72045dbad0",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "00d4f5e4bc94624fc2ae8fadeac22fa6eed5117f49249f38db20e44f0937db8c",
+    "size": 7549
+  },
+  "Panel_P2_42_0D_0b_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "c40dffca-3172-11f0-b445-2711b7126106",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a787d43810020d2786ba0bb98ec021c428e3ee2af51dd8012c1f4ba746d0144c",
+    "size": 5187
+  },
+  "Panel_P2_42_0D_0b_mp_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "bcca9018-d62a-4734-a0ea-67c1550b17ce",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4662871d1aeef6319727cfe1c4ff0099233fafff7f49f51197806a4ee09a6426",
+    "size": 13278
+  },
+  "Panel_P2_42_0D_0b_p12_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "81c8688e-50d6-11f0-99ed-a34d272ce30d",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7dfd8816984f97e3eddac8ddb5009152ddbd811252ac398e9326e87f725ad929",
+    "size": 21111
+  },
+  "Panel_P2_42_0D_0b_p2_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "80ae094b-b2b9-4266-9a16-9b884d9ba435",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "bf530278f26c8c4fa21d48e689ec0e76e2f25acc98a0fe6e806dafe249f98eac",
+    "size": 22122
+  },
+  "Panel_P3_36_02_0b_mp_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "3b8f9f0c-7609-490c-9f7d-3cb85928da11",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3fd078095554c5cef4bc73026f7b55b9c8a6a09f17dc51535fa8aa36599895f0",
+    "size": 8580
+  },
+  "Panel_P3_36_02_0b_mp_ltpo_dsc_vhm_pmic_b.xml": {
+    "depex_sha256": null,
+    "guid": "2e0e83cf-6e65-4af7-9623-7a2054312ded",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "bf2ec26dcf6a51539774a875b92787022cffb61e0098fa032a378381d3c207a7",
+    "size": 8406
+  },
+  "Panel_P3_36_02_0b_p10_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "6c88ee4c-8e30-44e4-9901-4d983d628f60",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "febdd75f3b12e33039f01612d8496d78b163d66fe446b9182f88ed6bd7c67551",
+    "size": 10966
+  },
+  "Panel_P3_36_02_0b_p10_ltpo_dsc_vhm_pmic_b.xml": {
+    "depex_sha256": null,
+    "guid": "86c216a3-b7f3-4055-a2c3-55017c36e705",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "e358a2b6898d0f775f6ea3e2d0de7e8e360065bcadbc50c4dce00633c891bba8",
+    "size": 10792
+  },
+  "Panel_P3_42_02_0a_mp_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "60ece386-7570-4cad-85fe-fd3ceb514e7e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b263e7e94743a4295c4f3f057bb049267664a51efa659e64952aa7423934ab49",
+    "size": 11752
+  },
+  "Panel_P3_42_02_0a_mp_ltpo_dsc_vhm_pmic_b.xml": {
+    "depex_sha256": null,
+    "guid": "a2cfa2db-a85c-43ad-bcb4-6cd4d8eb72d8",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2f19e830065d52e21dda9f8639e5f147bb0b2b8f3035efc8cfebbcae7f1da3d7",
+    "size": 11022
+  },
+  "Panel_P3_42_02_0a_p10_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "7b066083-c2d3-4480-8396-3f3cc3034842",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d0c0e47cd1c03105dc9d7625a25def2339c0f71f370d97c6a2933a56917d9fd8",
+    "size": 12684
+  },
+  "Panel_P3_42_02_0a_p11_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "abade0ff-65ed-41b7-959c-82902bb24727",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "44347bde1e9549a068bde1029d2395b5af82b82c18f88f034670c8edb95fc5bb",
+    "size": 15375
+  },
+  "Panel_P3_42_02_0a_p12_2_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "481ce728-7b5e-4b6a-abc4-d604202371e0",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "480f3373fa31f8231861451e03794afd40496e8f2983dd0182f730801a81ab7d",
+    "size": 15390
+  },
+  "Panel_P3_42_02_0a_p12_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "cdcec1ca-21ac-32c1-124a-26125ac19215",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "c5ed2146b1f52c713c44bf87435684df6264119197ed97a1a745e67adf522efb",
+    "size": 15397
+  },
+  "Panel_P3_42_02_0a_p20_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "e9c61163-e7bd-41f5-b175-fda5410f7e34",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8852f197bc79c2eca5cd20f69c4a0eaa2e15341cd856308dd3804d40ce88f680",
+    "size": 12600
+  },
+  "Panel_P3_42_02_0a_p21_ltpo_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "38043a7e-1840-4452-b94f-23fadf787b73",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b263e7e94743a4295c4f3f057bb049267664a51efa659e64952aa7423934ab49",
+    "size": 11752
+  },
+  "Panel_P8_42_02_0a_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "9a63d467-99ec-47e3-9636-96faeac4ade3",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0e69724f92571775bc80297a0585cf42516ea96c9cfef7aa6efb9269075b7eea",
+    "size": 5239
+  },
+  "Panel_P8_42_02_0a_sec_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "57f82ec2-4b83-451a-b7eb-9b5d1040cacd",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d127ab292018917f79fa88af9af740f1741d045292ba166c89b2ed88504460e1",
+    "size": 4859
+  },
+  "Panel_Q200_42_02_0a_mp_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "c77be8ef-2e45-48f6-b3b2-2eb9cdacd9b5",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8eeb6a373a7cdd2c22cf3c65c2f65eff50de03f512c02ded4a1023c75b71971e",
+    "size": 11079
+  },
+  "Panel_Q200_42_02_0a_p11_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "3c41b734-b9ba-4b49-a618-36bc1cde6f75",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "91e696971cb73265834cd0351d60a15e011e180ecddb9486aa46ba77e8542362",
+    "size": 12125
+  },
+  "Panel_Q200_42_02_0a_p12_2_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "4f96b13b-a8b8-4e5c-969b-98af6da6c229",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ac149755b79f5723a4c662f0397fef865926e9ee764ebcccc0e2d2c1cb594274",
+    "size": 12089
+  },
+  "Panel_Q200_42_02_0a_p12_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "e01df343-6363-4bb3-ab47-23ca3e690e46",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d8c4d27f2274c37649048c04b721dd689af2ec962e85fd4a3dbe69dc652eb93d",
+    "size": 12125
+  },
+  "Panel_Q200_42_02_0a_p20_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "cf077e13-5828-418a-8248-e5dcf8d124a4",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b1ceb0b453bc1c98b1a023ba2486ed6160bed86efaa3f78a76a5003545ff970d",
+    "size": 8918
+  },
+  "Panel_Q200_42_02_0a_p21_prim_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "8004bdca-7011-42cc-ac20-bd9d71fbdc9e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "fc2397efb96e88bfee925426037ed2904732476d312ad123962d7e804f42717b",
+    "size": 7897
+  },
+  "Panel_Q200_42_02_0a_prim_ltpo_dsc_cmd_pmic_b.xml": {
+    "depex_sha256": null,
+    "guid": "6dce03bf-dc6d-4255-b854-6ad2d7b5d8d9",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d7025eb0e2f9db1c95e80abbf44caec1e58ed426d25ca6adc4cb2da50f4c0943",
+    "size": 10309
+  },
+  "Panel_Q200_42_06_0a_sec_ltpo_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "a6ed4cf1-becb-40ef-aecf-2a0ad1a9b6d4",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "f60224116138c4df716a1c305ac74c85e7df978439308196c3323b910cda1037",
+    "size": 8907
+  },
+  "Panel_SONGYUAN_42_0d_0a_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "ff513116-c84c-476c-8419-2fd967ac6253",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0b9e5aca181bd7b27ccdc0ed80d99e9bc20865261dd27d9603f28bfb510bd2fa",
+    "size": 4686
+  },
+  "Panel_SONGYUAN_42_0d_0a_p10_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "123edc93-725a-4eb6-b9ed-9e016d6bf564",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ad3ee7cb26578b55d8439d6deb445f3f53269ffca2fd4cb7ab4eb44e0d81659d",
+    "size": 5300
+  },
+  "Panel_SONGYUAN_42_0d_0a_p2_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "7a3e2b4c-d8f1-4e6a-9c05-b2d7f8a31e94",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0ed0fc1e1affd9856cc2a2a75b24e15698c7accd058e8da850f30d85da02294f",
+    "size": 5422
+  },
+  "Panel_Samsung_Esync.xml": {
+    "depex_sha256": null,
+    "guid": "2ecfb0af-93af-4a3b-b420-43d46f77df55",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "62d29b940c90dd36025e5d9d01553cc15b5e8f1fc2cca78c15267d8a2b84294e",
+    "size": 5373
+  },
+  "Panel_Samsung_Esync_Mrr.xml": {
+    "depex_sha256": null,
+    "guid": "d2de51ea-f5ea-481d-97ab-1fdbf2858803",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "43efe57c730998b27460a79fed1c36525b6a0a7af5c1eaeda03e418c01156781",
+    "size": 5337
+  },
+  "Panel_boe_amoled_fhd_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "d7170685-5965-4b44-9305-37cdb199b9be",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ef479f6d5c9ba77573fc220d3af97464584b6c5f94c29fdfecdb9729502820c9",
+    "size": 2971
+  },
+  "Panel_boe_amoled_wqhd_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "88ca5abf-d0ac-4093-a68c-0cfae1ef9635",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "72b3b76be7a5a3f72e2f73f276e655744a16d5609b85ffe0e0da4b4482931f69",
+    "size": 3043
+  },
+  "Panel_boe_amoled_wqhd_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "6523a5c9-91cb-45c0-a2dc-25997cf23369",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8419fee454bf6f3d51e19ef7be59dc4ae2e97cade4344694702cee550953829e",
+    "size": 2899
+  },
+  "Panel_nt36860_wqhd_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "8f276ee4-e75e-4c3b-8bcc-c37771e26478",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "053331ced3e3e92da8b8357d12084fa7bb81c2c525d5bc6528108696756468d9",
+    "size": 4432
+  },
+  "Panel_nt36860_wqhd_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "6f2d4884-d8a0-11e9-af7a-d77b1fe990ec",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3067d24617d067e55f28ec5e6deeca5d539407b5235f6764e561cf8d76f22935",
+    "size": 4411
+  },
+  "Panel_nt37801_10bit_wqhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "7cfcd59f-3c6c-44d1-88f7-c84ff7457b7f",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "96b7576118837adbd230633392613ff49f6322a5b93eb108c12781a7c661ba78",
+    "size": 3265
+  },
+  "Panel_nt37801_10bit_wqhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "67a9e045-a85a-4fdc-8ab6-3bb515f9f1e7",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8135f941e671cb2cc5db6b696c6f1705548d0d9841bf9f3070b2c7e72022e0fd",
+    "size": 3180
+  },
+  "Panel_nt37801_120hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "1b968d68-bd92-41f6-8529-ef1020a2003e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "03b6f15171543543c153c58759cd8faa88a327d93ecf592dbf4b7904868174a0",
+    "size": 3348
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "564f33fa-e572-4678-a575-af6ac20ed2bd",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ca808ffd19cae7d48cc105b7ebc5e24cf03325bd0845695ba3025ee9ed7e2949",
+    "size": 3327
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_cphy.xml": {
+    "depex_sha256": null,
+    "guid": "939dfddf-82a2-459d-9e28-a38719b059b5",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "81ac772e4f237dc9afa266b4fbe9209554151c8fb66cee7f2eb8cdcc20f0e8ab",
+    "size": 3332
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_cphy_demura.xml": {
+    "depex_sha256": null,
+    "guid": "2ced8194-4ae6-492e-8f68-e2d2d695688d",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "85c2a1eec819918b483dc2a81310a8e8bd4cd076878bdc4225ab3b1c71b47a74",
+    "size": 3383
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_cphy_spr.xml": {
+    "depex_sha256": null,
+    "guid": "faa15bc9-99bc-40b7-a423-58690009df2e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "292f16341bd27a4429adf0940f56741294ecef31e322d251fccc477ea79090de",
+    "size": 3411
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_demura.xml": {
+    "depex_sha256": null,
+    "guid": "0e21c2b3-f417-4ac8-891f-12bbfaa96fe6",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "23da4e6113324a64c5a0e8fe0b891bd4f31dc4f396cc8dcf876676912fc268b6",
+    "size": 3301
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_demura_nspr.xml": {
+    "depex_sha256": null,
+    "guid": "fd90858a-da7e-4a5c-b2ab-4622db7efa63",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "10a8445193c3d7a86388ac02f83165f73ffb00b4148e42b7ceb15d5d6f42123e",
+    "size": 3562
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_splitlink.xml": {
+    "depex_sha256": null,
+    "guid": "de4c1ebc-d3f4-43d0-922f-b09d8144174b",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "826a4cfd9b1354b8ae7c0688c4bc337064da7db2ecdcbd29f4172d5e1431e18b",
+    "size": 4545
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_cmd_spr.xml": {
+    "depex_sha256": null,
+    "guid": "5404e828-36d2-46c8-980f-cb74e505718a",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "6872983a870e2570e0368c4ed1c6b23689734402d0bc6d64ce97bf60b5832c7c",
+    "size": 3352
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "3d2431eb-ad6d-4753-b13c-26d4e7789a2e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3bae70fb343a05a4f3c38a61818d6e3745f20e798a3abe62d16c18e12d6ca581",
+    "size": 3310
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_cphy.xml": {
+    "depex_sha256": null,
+    "guid": "059bcc95-f398-411d-950d-02fd9f224755",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ebadb56c7413defe37625901f9036f2171d36d601c2dd5506aa4700d6853a7f0",
+    "size": 3277
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_cphy_demura.xml": {
+    "depex_sha256": null,
+    "guid": "c9b533b5-a619-4797-912d-8b93a9a026b5",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "9849dde1346d4cee1e023d61a6d0ded9f1ce9dba9013831b4e6a684769493179",
+    "size": 3328
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_cphy_spr.xml": {
+    "depex_sha256": null,
+    "guid": "28a1e1e3-26d1-4413-9ec2-7f507847d119",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "96dd5e83f38b02e8f9e0168cbc5017095e41dead7a25b25cf5b6eb46e30321a0",
+    "size": 3402
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_demura.xml": {
+    "depex_sha256": null,
+    "guid": "1a652c6c-24b6-451e-b8d5-d50a735f8442",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "098d3b0cb94c9110f24339c7414b0b2b5c42da2584465e9dabc62b7072e16b45",
+    "size": 3284
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_demura_nspr.xml": {
+    "depex_sha256": null,
+    "guid": "c37f9620-e4d0-4821-92e5-b5013b9d3eb7",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d16ed379d4f385cf33b92923cb06c56908c2e79526a997d2331eb89ae8a4f777",
+    "size": 3545
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_splitlink.xml": {
+    "depex_sha256": null,
+    "guid": "48ce996b-a34c-4172-ba00-490c2b4dfde1",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "79142533206e56114af81b59de49f7e80abbf102fa6f3575f0c25dd6c3741371",
+    "size": 3427
+  },
+  "Panel_nt37801_120hz_wqhd_plus_dsc_vid_spr.xml": {
+    "depex_sha256": null,
+    "guid": "52c03f36-4308-4dc5-8ac6-651120f23856",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a5af6a67a9d6b5341d028797142965254143f5a8272499c861c437f3a7992078",
+    "size": 3375
+  },
+  "Panel_nt37802_120hz_vhm_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "7ea75a5e-2530-402e-993c-3052ad8f1863",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "42ca1d4325928d1cd49303ee9b2df6f47901aa6fe5523937e902c5cc9f58359a",
+    "size": 6059
+  },
+  "Panel_r66451_120hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "8297c793-9861-422c-9f67-d447af1ea812",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "590f2a03e2ba0a4c5cb552f899e8df9190599133f15eb0bc65accd7794548153",
+    "size": 3800
+  },
+  "Panel_r66451_120hz_fhd_plus_dsc_cmd_demura.xml": {
+    "depex_sha256": null,
+    "guid": "f4a245c8-940e-4523-a53b-82e3c8bc6970",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b97623267acd028cfd6edbbc2b17208df6ba6b617b97f658ca5a8b81731c41e6",
+    "size": 3964
+  },
+  "Panel_r66451_120hz_fhd_plus_dsc_cmd_hdk.xml": {
+    "depex_sha256": null,
+    "guid": "61156380-eb8a-4618-940f-ab9bdea1eec2",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8fa1651ade08c01665a0a6aa107acbd039336315b8852992182fc4b7b8d607a3",
+    "size": 3808
+  },
+  "Panel_r66451_120hz_fhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "44b09226-c2b4-45ed-aa6f-6686db103978",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "eec1f54b31977830ac5401aa55903f578d32d8906e09e7762f6970aa54fc82a5",
+    "size": 3312
+  },
+  "Panel_r66451_144hz_fhd_plus_dsc_cmd_cphy.xml": {
+    "depex_sha256": null,
+    "guid": "9874b60a-6b80-4d76-8eeb-7862c780ec03",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4f9ff7b58433e0d2b5fc29776f9952f2667dfc2d0728b45cb89df1436c590140",
+    "size": 3780
+  },
+  "Panel_r66451_144hz_fhd_plus_dsc_vid_cphy.xml": {
+    "depex_sha256": null,
+    "guid": "bc28e12e-c7e0-47f9-bbf9-0b45ed6f4b18",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "fc9bba76029ac56f490468155c2ec007bd167ea906e686af6f187cefb9f39033",
+    "size": 3829
+  },
+  "Panel_r66451_60hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "81ce7295-491d-4e3f-aaa7-ab43fef2f615",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "9a01febe9c77d62a81d44e8cb9632c157fb0612adb4bdd34b2a34b992641c450",
+    "size": 3129
+  },
+  "Panel_r66451_60hz_fhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "637ad94d-7d9b-4d5f-b420-770b65becda8",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "637bea0f03210b19020875f25aca226035e9c8ecc18f50fc4e75650ded898fc7",
+    "size": 2747
+  },
+  "Panel_rumi_cwb_vga_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "95fa1ab2-a4c8-4891-abd3-3de4bab07680",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "ded37cb27c3d56a5107e8fa896b6f9f751ad57b66daca180dfc0fdff75582582",
+    "size": 2007
+  },
+  "Panel_sec_nt37801_120hz_wqhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "019f1d56-bf74-49a3-9918-0e8125e101d2",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "99fa8e0557d132de166500e1b30cfdfc2b1333081083c425c262cd7943c08514",
+    "size": 3114
+  },
+  "Panel_sec_nt37801_120hz_wqhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "f019ff29-21e0-40c9-a93d-e13037a5e998",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "293ca4a9a5526a00b99807bdec7e39fc18ce3d8d254a5cc1c77dd00081411462",
+    "size": 3097
+  },
+  "Panel_sec_vtdr6130_144hz_fhd_plus_dsc_cmd_rfi.xml": {
+    "depex_sha256": null,
+    "guid": "0763b85c-45e3-4966-b1fd-d3d053c85a95",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b7a89a03c97892f0f2f2209e4d3e60a75226452d2bf44bfd3bcd46645db04efe",
+    "size": 3822
+  },
+  "Panel_sec_vtdr6130_144hz_fhd_plus_dsc_vid_rfi.xml": {
+    "depex_sha256": null,
+    "guid": "035b1d20-1829-46ea-87d7-0a02c49e000e",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "87c551b4556c4a5dee68626f55025f9c6de948c2886c4050ea556b08caff30dd",
+    "size": 3429
+  },
+  "Panel_secondary_Samsung_Esync.xml": {
+    "depex_sha256": null,
+    "guid": "c87cd546-4d58-4273-9eb8-ab9483c63b37",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "de07bb4d8642b3d2d54e6bd141c19f631faf4f0da5bb886d27d639a06a22a625",
+    "size": 5374
+  },
+  "Panel_secondary_truly_1080p_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "d3f8580c-ccb8-4804-bb03-776e7b542fc2",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d7ec7b7c65bb7c25719596ba79d5b2549cfc697e36e8b7b6a9db2bcd9f2be387",
+    "size": 3324
+  },
+  "Panel_secondary_truly_1080p_vid.xml": {
+    "depex_sha256": null,
+    "guid": "d192fee9-6a04-4be8-abfe-5534e2b457ec",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "989d4ae4c77b8919a18e63c6a5aa8176a98d2316362baa0e9e5a42d21e85d0a4",
+    "size": 3779
+  },
+  "Panel_secondary_vtdr6130_144hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "23eb5e2d-4a4d-4b35-bb7b-be39d7ee440d",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "70ca11002dee12fba441f360b637458dac1f5f6d3ded95997580b908f99b1bf5",
+    "size": 3745
+  },
+  "Panel_secondary_vtdr6130_144hz_fhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "a413f4e1-50fe-4848-82f1-efb814608221",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "84bc6be908c832597db1c53a3b9618e5147f3d01dfc6bbd8db3968068ca87c86",
+    "size": 3350
+  },
+  "Panel_sharp_1080p_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "0ae323d6-2ebe-11e8-8349-9ba636a0d80c",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "331988253f9be67d620299ddf5227aff7928bfe6cf420d75252310e7c72bd9fa",
+    "size": 2157
+  },
+  "Panel_sharp_120hz_qhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "0a60af27-d18d-452f-bb8b-1a886f7f6ccc",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "551d662e5c88c7af1c743c7fb9ca5fe86305e90bcf9bb100ce54f1c5e0e81ae3",
+    "size": 5484
+  },
+  "Panel_sharp_120hz_qhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "81466938-bb9e-43dc-a208-a41ba82a5861",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "364dc44612f0cf7fc7de96ff817b8cc128562a13998000c166faf0dc019b466b",
+    "size": 5342
+  },
+  "Panel_sharp_120hz_qhdpipe_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "81d00687-181b-4b23-a1cc-85fe6b9e25e6",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0f3057b0e66c041729ad7ca60674bf11e17097320c537615853e0bc3d93c0c23",
+    "size": 5447
+  },
+  "Panel_sharp_4k_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "8bc595b7-391a-4a9a-8256-5b9983b30392",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "483dd8af8403fc3f5276f72f5ac0c369edca28bda6e6c541750a25e1da94a9b4",
+    "size": 2732
+  },
+  "Panel_sharp_4k_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "19b58acd-b1f8-4078-b9a5-a33584b680e2",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "bf323813902f206465df6249e9707a713130b4b03b77569a28fae6b5ea5c665d",
+    "size": 2649
+  },
+  "Panel_truly_1080p_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "87273b42-311d-11e8-9324-dfb2dadfc3d1",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "c9c3870f2533b5f488c12cc6568d90a2bfbd923ccd8157ca5883d21318670432",
+    "size": 3434
+  },
+  "Panel_truly_1080p_vid.xml": {
+    "depex_sha256": null,
+    "guid": "bafd3200-311d-11e8-8651-0fb3cacf38fb",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d7f5ef1df35f03c027cae6ecf56a61178e3c7b2a8786593f7727c3df35d666c5",
+    "size": 3904
+  },
+  "Panel_truly_wqxga_cmd_splitlink.xml": {
+    "depex_sha256": null,
+    "guid": "eb0a97f6-39db-41d4-9b3c-ca3badc144b4",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "226e0b5cb315e7685a4194d1bf37f5c56354f87a968afb669da621c4f79571f6",
+    "size": 3550
+  },
+  "Panel_truly_wqxga_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "8cae2c55-fc5a-410b-812b-8ca22f572f36",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7b5aea71b696ff734c3ee423f5e606a45b4c84e473e2cef2e07f110b182b48fc",
+    "size": 3717
+  },
+  "Panel_truly_wqxga_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "13ac9dc9-0092-4374-ae1a-06ff35950fd0",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "5a391e5d3972dc8d122903829185d039616a238ecfd8e295ef7ba2df3c4b0ced",
+    "size": 4360
+  },
+  "Panel_truly_wqxga_dual_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "fc6315f9-f8fe-4222-a1e3-226df55d7592",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8879bd430f61dfca666d65e712203a8eb04977822e86a36665bc388f1de84a17",
+    "size": 3473
+  },
+  "Panel_truly_wqxga_dual_vid.xml": {
+    "depex_sha256": null,
+    "guid": "95e7b040-26a2-4511-9abb-1d95d6da7082",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "fd01b4abac0e88eb93e2edead53e4d5b610c1e574eacfd5bbba2a41e6b5fb40d",
+    "size": 3975
+  },
+  "Panel_vtdr6130_120hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "138816ef-44b3-4fa1-9f8c-ca23b0ac72cd",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b7f7f2c4c068334c2af370b35aa12ac787fe99b9b703fb1faed81d887e627c9d",
+    "size": 3704
+  },
+  "Panel_vtdr6130_120hz_fhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "54603fd1-6cd3-469e-a2fb-d0759525c423",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0996b49326558a3658e94ba2ebf46356f23cf99e08da62d55b64629c6e083d0a",
+    "size": 3506
+  },
+  "Panel_vtdr6130_144hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "ae3f9548-010c-4aec-a9d2-4ae3e16d2f8b",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "355e25b3f1da3f3657c6549328f9ded782772db54dfb18e910b99ef1f4c8f9d0",
+    "size": 3736
+  },
+  "Panel_vtdr6130_144hz_fhd_plus_dsc_cmd_demura.xml": {
+    "depex_sha256": null,
+    "guid": "3de03011-41e8-4353-a4e5-02721e71a0f4",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "058806cf34ba08ab4c5592c32bcb2010537708a9b8c1367080f89397cc3dd753",
+    "size": 3971
+  },
+  "Panel_vtdr6130_144hz_fhd_plus_dsc_cmd_rfi.xml": {
+    "depex_sha256": null,
+    "guid": "0ef4d970-0b59-4af4-a8f7-f6a239eed792",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "379985dfb58e827adea3f7fdaa7013435c236d987e243338aab1494726d5cedd",
+    "size": 3783
+  },
+  "Panel_vtdr6130_144hz_fhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "12372575-2a07-4c4e-be92-6093a55fed33",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "20c763f08296db84b457997a1a1c438e43ff83c300714d1700af729aa32ef021",
+    "size": 3585
+  },
+  "Panel_vtdr6130_60hz_fhd_plus_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "36630e03-0236-4983-abde-f982b23419fe",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b382ac340e5850421cd902ab5b15e4276ccfe2a20b3c6a40810b5dacd85245cb",
+    "size": 3704
+  },
+  "Panel_vtdr6130_60hz_fhd_plus_dsc_vid.xml": {
+    "depex_sha256": null,
+    "guid": "573fa171-1d5c-4c12-bdc8-19dcefbbd483",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0fe97de4fe0390bb07b63ad412fc9be810ce39fcc20c67174bbf73fb3899df41",
+    "size": 3506
+  },
+  "ParserDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "4a568b8a-4d9d-4984-9c75-cee33698e451",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "10473be586ff3b9aab16879968dd60b8578cafe8534eb8877720e7bc8ba2e22a",
+    "size": 32768
+  },
+  "PartitionDxe": {
+    "depex_sha256": null,
+    "guid": "1fa1f39e-feff-4aae-bd7b-38a070a3b609",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "afae687a7551476970cb33ffd6e2fb95acab6a14d54560184a6719570b9d3e11",
+    "size": 53248
+  },
+  "PlatformInfoDxeDriver": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "b105211b-bbbd-4add-a3b0-d1cf4a52154c",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b95cd46ea5554fc3c3a00899899b1f26c5da134bfa83e6374ac3473b47581c9b",
+    "size": 32768
+  },
+  "PmicDxe": {
+    "depex_sha256": "cc8bf8c154c79716116873363269e8c00e6f3da84e78552a0cadb22dd16050d7",
+    "guid": "5776232e-082d-4b75-9a0e-fe1d13f7a5d9",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "497e21efda40716f84a1c24222e53f628e919faef8b3d7b153bb74fdddd7f534",
+    "size": 253952
+  },
+  "PmicGlinkDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "6d4a9cf7-cc0c-42b0-aa89-f6a6a8d99273",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a5e6581f1d10936a5d158ac3c2f2c4a29a114f924768ad66273d2241183712df",
+    "size": 49152
+  },
+  "PrintDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "79e4a61c-ed73-4312-94fe-e3e7563362a9",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b8177d21c7c73593b143a996c93c11da98b9783ec41dbfafd6c50a4ce23923ed",
+    "size": 32768
+  },
+  "ProjectInfoDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "0a8d6360-7ef3-11ea-b20f-b3a524584400",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8dc9ff9fa6e1406b0278752aac74c0e9ccfa375d335f0b35d37de6ab9961185e",
+    "size": 49152
+  },
+  "PsStateDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "92bdcb29-d427-400e-847d-37345fc1d5f0",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "424a6b78c3121d5e79519700ed1bb70738d75ad510bd5a95e83be73c7b1e423b",
+    "size": 28672
+  },
+  "PwrUtilsDxe": {
+    "depex_sha256": "69f6f40457ed7a884f56e034cb84bf53bf4cb3210cc31839e0d1a5d86b460a94",
+    "guid": "0401b830-bff9-44a2-a5f6-95734a33c017",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "63dc57abac2b4a6a58f5392449908bc80fbb302eec2093acc16bd7a4e70119bc",
+    "size": 32768
+  },
+  "QRKSDxe": {
+    "depex_sha256": null,
+    "guid": "3cf7f36e-5a97-496a-bb4b-d4f9937fa311",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "39bdffd97940f1cf9953734e00a38b2534bbd6f7b6c5ac5c198b41f08f725d8f",
+    "size": 36864
+  },
+  "QcomBds": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "5a50aa81-c3ae-4608-a0e3-41a2e69baf94",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2fff5f18272d3a49901efec1565e55630a94459f097d2b8699cb5fa36c8f4329",
+    "size": 131072
+  },
+  "QcomChargerApp": {
+    "depex_sha256": null,
+    "guid": "eee9c2b1-16ca-4f34-87ea-2e6d1e160cc4",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4fe2d9c1a89236aac63f636a39b7b6105688ed8d4f90c3680da662abe533534a",
+    "size": 86016
+  },
+  "QcomChargerDxeLA": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "4bce7f36-428e-4393-99e3-7e0844404dba",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "23696351be44a81f774e73e55e13428048cdae59a3999f0d2278e9a78d06c335",
+    "size": 126976
+  },
+  "QcomScmiDxe": {
+    "depex_sha256": "d1660507ac319059fc3628541b8edb079275f1fa7a9492789617a781a01151a6",
+    "guid": "9585984c-f027-45e9-afdf-adaa6dfaaac7",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "eb76ab32fcc8987b14f66a89a5f1574e8bff42ef050b6d7ed2a4dd401bd83d21",
+    "size": 40960
+  },
+  "QcomWDogDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "040e1e61-0afb-411b-9ec9-00f3fc59cc13",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2ed242d409a09fd2bd3da102dcdd5a4dd93a02346a646641250cb4ada8d0b937",
+    "size": 28672
+  },
+  "Qup": {
+    "depex_sha256": "44a8c9f466db74c73b325668a57fabe9fdf08e9eb22604a7cb5bf760ec45e3e5",
+    "guid": "a16b79d2-afe0-4aed-a3ab-8ce3fd0f8c71",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "5f273bf4efcd92252b643eb6291676c9a2b32f71f884329a83162b1355988db6",
+    "size": 32768
+  },
+  "RealTimeClock": {
+    "depex_sha256": "1c325a10fb01a2d5093fba504ffc36a3b809aada6a665f455755cc57a965f546",
+    "guid": "b336f62d-4135-4a55-ae4e-4971bbf0885d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "02666625895f9f3817f0ce9fc9a1604f63cbba17c4180207bd2664beddeec417",
+    "size": 36864
+  },
+  "ResetRuntimeDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "3ae17db7-3cc5-4b89-9304-9549211057ef",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2be0085403384d1dd06c3ab5f50681eb7288ec3610d5e2d18d188185195d6b1b",
+    "size": 36864
+  },
+  "RfChipDxe": {
+    "depex_sha256": "8aae293d7a78112cbd440faba64cba753dc57cbdf68956cbc83b18b9f5bbc3b9",
+    "guid": "af212080-de29-4c07-b8f3-f74502389876",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "3c9aa9001e516a804aeac103ab36291fd71e3fbf3e61ee87cc2eb6f7fde7f36e",
+    "size": 28672
+  },
+  "RmVmDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "1d9cc582-7a90-4109-835b-0cb05b6762e1",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "fd7f18b24a7e2e5e0e716e1896850acbe6eb72a74043461b32b967485824c781",
+    "size": 57344
+  },
+  "RngDxe": {
+    "depex_sha256": "69f6f40457ed7a884f56e034cb84bf53bf4cb3210cc31839e0d1a5d86b460a94",
+    "guid": "b0d3689e-11f8-43c6-8ece-023a29cec35b",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7b1ada5f1dda46149893bd82b1f721a7a8997c7d727de5c8379d11053f30f7cb",
+    "size": 36864
+  },
+  "RpmhDxe": {
+    "depex_sha256": "4222f37e19a4b252aa185240a267b613ee5e464543e682f222a21fea7c0ed2a2",
+    "guid": "cb29f4d1-7f37-4692-a416-93e82e219766",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "b850bcb77599468d1e20e4eba78c0b6f086739b42bcb88482bb57db7314da4d3",
+    "size": 65536
+  },
+  "RscDxe": {
+    "depex_sha256": "69f6f40457ed7a884f56e034cb84bf53bf4cb3210cc31839e0d1a5d86b460a94",
+    "guid": "ea888df7-d431-44af-844c-7b29390f2758",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "559179e6c06005f07da564aef4ab19403964e648969eb9fc8cdd56fb92e0be41",
+    "size": 36864
+  },
+  "RscRtDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "d93ce3d8-a7eb-4730-8c8e-cc466a9ecc3c",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "5dd243a326f926b933ffc853f7a025e2bfc7bfabf8bd8e1d749b42b97532ecf3",
+    "size": 36864
+  },
+  "RuntimeDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "b601f8c4-43b7-4784-95b1-f4226cb40cee",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "503a6824d3219a9b6db87e6f14e04cff179aa04913cc7145e8680a5125194a0d",
+    "size": 32768
+  },
+  "SCHandlerRtDxe": {
+    "depex_sha256": "7c91bab012ed3f154eff94f9fae034c2ac3baed364cf8eb7f1b45e52b626d9fe",
+    "guid": "6c2004ef-4e0e-4be4-b14c-340eb4aa5891",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7fb9cca58e0484eea248d574a8ab323f1e7b9e7709225d4aa156dbdeb63605ff",
+    "size": 32768
+  },
+  "SPI": {
+    "depex_sha256": "44a8c9f466db74c73b325668a57fabe9fdf08e9eb22604a7cb5bf760ec45e3e5",
+    "guid": "7a32bd23-f735-4f57-aa1a-447d2fe3be0d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "073768c3e6ee2ed80a5d98452ee2a6950b7b1fa1781de291ea11ecd547ca4b6d",
+    "size": 118784
+  },
+  "SPMI": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "2a7b4bef-80cd-49e1-b473-374ba4d673fc",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "39042957ebcec27fb6da9dbfdf397252eb72701f7b4c6a64762920e878e0e507",
+    "size": 57344
+  },
+  "SPSSDxe": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "5d787b6c-6254-43f5-a7a8-cb25329cf97e",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "bd2ca664e68bfbcf9a1d35a28e0e0a113293a09488cdb96e13275e44d15d620b",
+    "size": 53248
+  },
+  "ScmDxeCompat": {
+    "depex_sha256": null,
+    "guid": "4b4973ee-401b-4f36-a6a9-533dfccdfc33",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "0b4f10ae7047460bf42daed9821f7513b109fc99e9a00446b4870e26cef79aa5",
+    "size": 57344
+  },
+  "SdccDxe": {
+    "depex_sha256": "96d3dcd80ec35498b71c6d2f1d0e08aab0caa5c6d8b8903d3f1d469636544f1f",
+    "guid": "f10f76db-42c1-533f-34a8-69be24653110",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "c09d18d216be49c82bac57aaec6d1fba8f6a19e2382d600b7394e8a9b521c5e7",
+    "size": 135168
+  },
+  "SecParti.cfg": {
+    "depex_sha256": null,
+    "guid": "a1e235de-e825-4591-9623-c43175811826",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "6970a330bd67203e7d6c05046ad5bf2f2f5e15cb239bfbbe0f33a556339d1c5e",
+    "size": 4984
+  },
+  "SecRSADxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "32c71e68-83a8-46ed-aed1-094e71b12057",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "92469f4203d0ce51cd9920ed6c3bb0dd4fd41519d4e18f699e4b198af6fcbb7e",
+    "size": 40960
+  },
+  "SecurityStubDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "f80697e9-7fd6-4665-8646-88e33ef71dfc",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "4ca760692cbaf6ada213491a689f83f90101d634e0e8b6036048b544f39dbbcc",
+    "size": 53248
+  },
+  "ShmBridgeDxeLA": {
+    "depex_sha256": null,
+    "guid": "41ebb6a6-2c19-4c02-841d-848ce004a282",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "603457fdd359790fd3f8255be31591b652e41668556885245011d55139937db8",
+    "size": 36864
+  },
+  "SimpleTextInOutSerial": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "857a8741-0eec-43bd-9482-27d14ed47d72",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "cba6b915a4a3d371c7a573f6ea64961767220e98baaabe9a6ddc407312fd304b",
+    "size": 32768
+  },
+  "SmemDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "f541d663-4a48-40aa-aabf-ff158ccae34c",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "1a3bf99804b449e3280212e1e6e7c97496d9057cf53f0a33cbae9a1d41587a1d",
+    "size": 40960
+  },
+  "TsensDxe": {
+    "depex_sha256": "51e48aff95a5c61299f0c6b7550d1e2348078025c313f63c206f4d6f5cf36477",
+    "guid": "f09ad92e-485c-9cdb-3e05-3385c38f94cc",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2174eff7512475c450232a9de488b355657e9a240c822380450caf366bcf32ae",
+    "size": 40960
+  },
+  "TzDxeLA": {
+    "depex_sha256": null,
+    "guid": "cf6dfc66-14ab-4e13-84db-9c02912d1404",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a075b6fb1699268818a9793fed628baa924d1c17cdfa9a66b0a249dc172e289f",
+    "size": 69632
+  },
+  "UCDxe": {
+    "depex_sha256": "69f6f40457ed7a884f56e034cb84bf53bf4cb3210cc31839e0d1a5d86b460a94",
+    "guid": "5f0937cd-73f9-445e-b320-bb6fd5d3cbde",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a49235c2ab6099df43c68f2eeafc26d4c599115dc1932898faa7c87344aa0330",
+    "size": 192512
+  },
+  "UFSDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "0d35cd8e-97ea-4f9a-96af-0f0d89f76567",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "093ea800e667785d3adbe9995bb420a24279c861e291dbf7e80c9950c5d6b943",
+    "size": 176128
+  },
+  "ULogDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "e43128a8-8692-42b6-8afa-676158578d18",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "8484220eafe26365b04408df419489a45055928a22f840af54d9ec787825f9e4",
+    "size": 77824
+  },
+  "UsbBusDxe": {
+    "depex_sha256": null,
+    "guid": "240612b7-a063-11d4-9a3a-0090273fc14d",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "7693be2e784be127ea24ff44de90db7ba856491a29aa1c256a79730b624a0c9c",
+    "size": 81920
+  },
+  "UsbConfigDxe": {
+    "depex_sha256": "1f7bfcea6bbf6b396d64df59146c19d4c315845edda71ae13ff92aa2bc6e2695",
+    "guid": "cd823a4d-7dec-4531-ae5d-4134fa4127b8",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "685f0097a34c8a886ea680442bf6fec48d92a33da308f7e0856081d294317629",
+    "size": 94208
+  },
+  "UsbDeviceDxe": {
+    "depex_sha256": "445084b65f55991565be20b692e489f28006a91c3d0a050eae2a8eebdf12f563",
+    "guid": "3299a266-15f0-4346-8318-716336736d3e",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "6ac617f633e8573e3d86f36efa677136ff5016760630c8efc63fa135f9b2ad84",
+    "size": 53248
+  },
+  "UsbGblFastbootDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "105c8017-879e-48d0-9687-1551fcc66ea7",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "515ce58ceca8acf5b29588563079a5e7af9aaad377fc8cb20f9d1ab1bbcc9456",
+    "size": 36864
+  },
+  "UsbInitDxe": {
+    "depex_sha256": "ac68645cdf6f47e6d36bb1293073c8d53a413ddda8e9f4c4503e6cc299ec8e79",
+    "guid": "0a134f0e-075e-40b3-9c63-3b3906804663",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d2a3b6da7517a8371554be59dd900277feda33a1a684105ceb76e0aa186a6c90",
+    "size": 32768
+  },
+  "UsbKbDxe": {
+    "depex_sha256": null,
+    "guid": "2d2e62cf-9ecf-43b7-8219-94e7fc713dfe",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "5e51b5666103822ad89f53f8ab82d735ef761dd782929213285facfab8a3248d",
+    "size": 53248
+  },
+  "UsbMassStorageDxe": {
+    "depex_sha256": null,
+    "guid": "9fb4b4a7-42c0-4bcd-8540-9bcc6711f83e",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d8a70cbe6626646b50d1f42a4db1268f68f001ab98f33ad3ac8ea55378849faa",
+    "size": 49152
+  },
+  "UsbMsdDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "5af77f10-90df-4e7e-8325-a17ec09d5443",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a8888b3b953481605439da6bf13e607df6e991b1f1985cdcb31580d939395b8a",
+    "size": 69632
+  },
+  "UsbPwrCtrlDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "11faed4c-b21f-4d88-8e48-c4c28a1e50df",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "bad78b051229a6f13f73b22f9ba9180604ac0949ff70406610cf621b2a34351d",
+    "size": 40960
+  },
+  "UsbfnDwc3Dxe": {
+    "depex_sha256": "bd158853534205e5f34d9372e87432344040de5a5d5c256b3856fb74332e9bf6",
+    "guid": "94f8a6a7-dc34-4101-88c1-99179cceae83",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "9637500859536724554b483b79e3d60c5fc662fdd01d93fbcac1d0e44cf8f137",
+    "size": 98304
+  },
+  "VariableDxe": {
+    "depex_sha256": "557c754d26e2667287367a856ea5fcd584f35ab796d24a6a875d1648a4637d23",
+    "guid": "2b0ecdce-01ae-446e-9ffd-c4217de0340f",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "32178deb5e040a962968977901ba8f897cf33e44adf1d5680ac2faaaf0943664",
+    "size": 61440
+  },
+  "VcsDxe": {
+    "depex_sha256": "c8001e9cea134cf8205ad4167fd0ff3b8dab6ecf325c723158cc6916e4a9b1cf",
+    "guid": "8bd3b475-401a-4b0b-9315-edee61a1eae5",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "694ce52b9b4f70a02335da88ee99405e3b8d6029f8e816e719ad73ccd5fd6b93",
+    "size": 69632
+  },
+  "VerifiedBootDxe": {
+    "depex_sha256": null,
+    "guid": "fd975fb5-92c3-40b3-b05c-9c434326ab64",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "f57d60c2f6642c15b157094bdbcc57c597ba164350d4254647a193be95414b71",
+    "size": 61440
+  },
+  "WatchdogTimer": {
+    "depex_sha256": "832a6bf7c961a4f725cf51f8133ebd41f08300135f53942824aa2879f94d4eda",
+    "guid": "f099d67f-71ae-4c36-b2a3-dceb0eb2b7d8",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "55fdd321c2286e73003aa8c93d767f5127f35d04e5630aeb772cf6a2115c6df1",
+    "size": 28672
+  },
+  "XhciDxe": {
+    "depex_sha256": null,
+    "guid": "b7f50e91-a759-412c-ade4-dcd03e7f7c28",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "9e417915474c90607d3f3c5e2ec5cd38e0307d46c3ef90434e439d152468007f",
+    "size": 90112
+  },
+  "XhciPciEmulation": {
+    "depex_sha256": "6e3f02198c4fa8c831cff254f5913e1cb682ffa122066be8813f9937cd9b64d2",
+    "guid": "beb12bee-f6e1-11e1-9fb8-6c626de4aeb1",
+    "kind": "pe32",
+    "module_type": "DXE_DRIVER",
+    "sha256": "a4b5e3d3019d8256fb4845c74fc17055d6e5b83df847f66c4369adb81975c309",
+    "size": 40960
+  },
+  "logo1.bmp": {
+    "depex_sha256": null,
+    "guid": "a91d838e-a5fa-4138-825d-455e23030794",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "d1dd9e5d98208b36ebe9f59a871445d3e2afe69bed610ce073218cb2b5a8ec5e",
+    "size": 48426
+  },
+  "sprconfig_4001_41_02_0a_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "a37af41e-37d8-470c-bced-c1dc15542b7f",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "21c14133c7608ac7ece87a7ac2114175e651682691bb986e0da3557738315f9b",
+    "size": 588
+  },
+  "sprconfig_p3_42_02_0a_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "17144781-b74c-4245-8127-f47eff60d0cb",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "16dcde66d555ed69eff3809e4801f357ad1fc5d6f5875e689074926f4046409b",
+    "size": 588
+  },
+  "sprconfig_p3_42_02_0a_mp_dsc_vhm.xml": {
+    "depex_sha256": null,
+    "guid": "a0f8cfbc-71fc-45bc-aa63-4d50e170eb8d",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "16dcde66d555ed69eff3809e4801f357ad1fc5d6f5875e689074926f4046409b",
+    "size": 588
+  },
+  "sprconfig_q200_42_02_0a_mp_prim_dsc_cmd.xml": {
+    "depex_sha256": null,
+    "guid": "1a7a3498-010e-4865-9c74-2e3fefe15268",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "16dcde66d555ed69eff3809e4801f357ad1fc5d6f5875e689074926f4046409b",
+    "size": 588
+  },
+  "uefipil.cfg": {
+    "depex_sha256": null,
+    "guid": "21e9bdd9-6c3f-4f10-84a5-bbec322741f1",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "2b5cb6245f36fe09eebd50d119c6ab54416f33649cae47f252e0fc365d425b28",
+    "size": 394
+  },
+  "uefiplat.cfg": {
+    "depex_sha256": null,
+    "guid": "dde58710-41cd-4306-dbfb-3fa90bb1d2dd",
+    "kind": "raw",
+    "module_type": "DXE_DRIVER",
+    "sha256": "1f9bed5297317fe383c60adf35d4969becb4c79ea7bc0838852107a6dfa8ada9",
+    "size": 501
+  }
+}
