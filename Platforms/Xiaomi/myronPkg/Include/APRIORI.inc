@@ -2,9 +2,9 @@ APRIORI DXE {
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 
-  # DtbExtension 必须先于厂商驱动发布：EnvDxeEnhanced 下一个就要把它读出来
-  # 交给整个厂商栈，晚一步这一轮就白跑。
-  INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
+  # The tree comes from the image, so DtPlatformDxe has to run before the
+  # vendor stack that resolves its regions through it.
+  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
 
   INF Binaries/myron/EnvDxeEnhanced/EnvDxeEnhanced.inf
 
