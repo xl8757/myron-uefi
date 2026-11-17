@@ -23,16 +23,16 @@
   BUILD_TARGETS                  = RELEASE|DEBUG
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = myronPkg/myron.fdf
-  # 1 = the vendor DisplayDxe drives the panel; 0 = SimpleFbDxe uses whatever
-  # framebuffer ABL left behind.
+  # 0 = SimpleFbDxe uses the framebuffer ABL already left at 0xfc800000.
   #
-  # This was 0, on the theory that a vendor display driver would own MDSS and
-  # clash with the running scan-out client. The sibling package for this same
-  # phone sets 1 and boots to its boot manager, so it is 1 here now: with 0 the
-  # DXE stack stops on a synchronous external abort at 0x17422030 while EnvDxe
-  # is running, and matching the working configuration is the cheaper thing to
-  # test than reasoning about MDSS ownership.
-  USE_CUSTOM_DISPLAY_DRIVER      = 1
+  # With the vendor DisplayDxe the DXE stack faults inside EnvDxe at
+  # 0x17422030 (a synchronous external abort), and DisplayDxe also paints the
+  # console as horizontal streaks because its mode is not this panel's, which
+  # makes the screen useless for reading diagnostics. SimpleFbDxe leaves the
+  # bootloader framebuffer alone and prints the DXE console cleanly, so the
+  # fault is legible. Getting the panel to initialise properly is a separate
+  # job from getting past EnvDxe.
+  USE_CUSTOM_DISPLAY_DRIVER      = 0
 
   #
   # 0 = SM8550-AB
@@ -84,7 +84,7 @@
   #
   # Simple Frame Buffer
   #
-  # 1264x2780, as the sibling package for this phone sets them.
+  # This phone's panel: 1200x2608 with a 4800-byte stride (SurfaceFlinger).
   #
   # The panel itself is 1200x2608 (SurfaceFlinger) with a 4800-byte stride, and
   # FINDINGS.md records the firmware GOP as 1220x2656, so these numbers are not
@@ -97,8 +97,8 @@
   # as presentation rather than as a fault. Fixing that means teaching
   # DisplayDxe this panel's real mode - a separate job from getting the stack to
   # run, and the stack running is what this value buys.
-  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1264
-  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2780
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1200
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2608
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|32
 
   #
