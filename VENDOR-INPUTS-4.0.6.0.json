@@ -1,0 +1,24 @@
+{
+  "source_package": "K90PM 4.0.6.0 (OS4.0.6.0.WPMCNXM)",
+  "source_zip": "K90PM 4.0.6.0[9E992].zip",
+  "zip_sha256": "d083b0ee0be62d6cf299575954512ca682a805c7264f1b6f677ab7feb5bc8f3f",
+  "uefi_img_sha256": "5a16c74bec9c014a14423066643e38956d93fdd416280df4243fad681f2111cd",
+  "uefi_img_bytes": 2793472,
+  "entries": 236,
+  "previous_package": "OS3.0.13.0.WPMCNXM",
+  "previous_entries": 219,
+  "shared": 216,
+  "changed_binaries": 98,
+  "only_in_previous": 3,
+  "only_in_4060": 20,
+  "notable_changes": {
+    "DisplayDxe": {
+      "old_size": 442368,
+      "new_size": 454656
+    },
+    "GpiDxe": {
+      "old_size": 73728,
+      "new_size": 90112
+    }
+  }
+}
