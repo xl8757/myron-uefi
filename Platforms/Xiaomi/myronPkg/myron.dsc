@@ -41,13 +41,16 @@
   # DDR Memory
   #
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
-  # Captured MPIDRs: six cores at Aff2=0 and the two primes at Aff2=1.
-  gArmPlatformTokenSpaceGuid.PcdClusterCount|2
-  # SM8850 GIC addresses from the captured live device tree. Without these the
-  # platform inherits the SM8550 defaults and the GIC is programmed at the wrong
-  # address while interrupts are being routed.
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x17000000
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x17080000
+  # GIC and cluster geometry are left at the platform defaults on purpose.
+  #
+  # These three PCDs were added here from the captured live device tree, on the
+  # reasoning that the SM8850 addresses differ from the SM8550 defaults. They do
+  # not: the sibling package for this exact phone (songyuanPkg) sets none of
+  # them and boots, and with them set the aston EnvDxe takes a synchronous
+  # external abort on its first GIC access at 0x17422030, which is inside the
+  # 0x17000000 distributor range. The vendor binaries are built against the
+  # defaults, so overriding them moved the programming window away from what
+  # they expect.
 
   #
   # UEFI Stack
