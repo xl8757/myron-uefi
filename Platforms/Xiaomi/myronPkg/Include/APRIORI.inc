@@ -2,9 +2,11 @@ APRIORI DXE {
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 
-  # The tree comes from the image, so DtPlatformDxe has to run before the
-  # vendor stack that resolves its regions through it.
-  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  # The vendor stack resolves its regions through gEfiDtbExtensionHobGuid, and
+  # Mu's scan for the stock firmware's HOB registration function cannot work
+  # under "fastboot boot". This driver publishes the HOB from the tree embedded
+  # in this image, and has to run before EnvDxeEnhanced looks it up.
+  INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
 
   INF Binaries/myron/EnvDxeEnhanced/EnvDxeEnhanced.inf
 
