@@ -1,0 +1,43 @@
+# UniXNU payload for the myron board, kernel variant.
+#
+# The kernel entry is type="xnu": UniXNU does not load Mach-O itself. It stages
+# the boot arguments, the device tree and any kexts, then hands them to the
+# UniXNULoader protocol, which DarwinBoot installs. DarwinBoot's parser accepts
+# arm64 and arm64e MH_EXECUTE including the arm64e capability bits, and prints
+# "DARWINBOOT: command line:" before the hand-off - that line is the first thing
+# to look for in a log when the kernel does not appear.
+#
+# The second entry is the EFI payload known to work on this board. It is kept as
+# the control: if it still returns Success while the kernel entry does not, the
+# menu, the FAT volume and the firmware are fine and the problem is in the
+# loader hand-off.
+#
+# File names are 8.3. The volume is built by tools/make_payload.py, which writes
+# 8.3 directory entries only, and UniXNU joins these names onto \EFI\UniXNU.
+
+version = 1
+
+[boot]
+timeout = 10
+default = "xnu"
+rotate = 3
+
+[ui]
+title = "UniXNU"
+
+[[entry]]
+id = "xnu"
+title = "XNU kernel"
+type = "xnu"
+path = "/PAYLOADS/KERNEL.MACHO"
+# -v: verbose kernel output on the console.
+# keepsyms=1: symbolicated panics.
+# debug=0x8: DB_KPRT, keep printing after the console switches.
+# slide=0: the prelink step fixes the load address, so the kernel must not slide.
+args = "-v keepsyms=1 debug=0x8 slide=0"
+
+[[entry]]
+id = "hello"
+title = "Hello payload"
+type = "efi"
+path = "/PAYLOADS/HELLO.EFI"
