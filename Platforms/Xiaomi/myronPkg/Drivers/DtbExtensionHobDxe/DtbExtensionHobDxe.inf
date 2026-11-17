@@ -30,14 +30,22 @@
   BaseLib
   DebugLib
   HobLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
   UefiDriverEntryPoint
+
+[Protocols]
+  gEfiFirmwareVolume2ProtocolGuid
 
 [Guids]
   gEfiDtbExtensionHobGuid
 
 #
-# Nothing to wait for: the entry argument HOB comes from SEC, and the APRIORI
-# list already places this driver ahead of the vendor stack.
+# TRUE on purpose. This driver is in APRIORI ahead of the vendor stack, and the
+# volume protocol it reads the tree from is published by DxeCore itself while
+# the APRIORI list runs, so waiting on it here would deadlock this driver
+# against the very ordering that makes it useful. The entry point retries the
+# lookup instead.
 #
 [Depex]
   TRUE
