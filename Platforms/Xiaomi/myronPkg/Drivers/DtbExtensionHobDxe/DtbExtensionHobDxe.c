@@ -64,6 +64,14 @@ STATIC CONST EFI_GUID  mDeviceTreeBlobGuid = {
 #define DTBHOB_FB_STRIDE 1200U
 #define DTBHOB_FB_SCALE  2U
 #define DTBHOB_FB_MARGIN 24U
+
+//
+// Stop after publishing so the report stays visible. 0 returns to letting the
+// vendor stack continue.
+//
+#ifndef DTBHOB_HALT_AFTER_PUBLISH
+#define DTBHOB_HALT_AFTER_PUBLISH  1
+#endif
 #define DTBHOB_FB_BG     0xff102040U
 #define DTBHOB_FB_FG     0xffffffffU
 
@@ -263,10 +271,19 @@ DtbExtensionHobEntry (
   SayHex ("DTBHOB: OK published the tree at ", Address);
 
   //
-  // Leave the report on screen long enough to read it. The vendor stack follows
-  // immediately and its own output would scroll this away.
+  // Diagnostic build: stop here instead of letting the vendor stack run.
   //
-  gBS->Stall (5000000);
+  // The report above is the only evidence of whether the HOB was published, and
+  // the dispatcher's own console output overwrites it within a second. Halting
+  // makes the report the last thing on screen, so one boot distinguishes
+  // "the HOB is published and something else breaks" from "this driver never
+  // got that far".
+  //
+  // Set DTBHOB_HALT_AFTER_PUBLISH to 0 to continue into the vendor stack.
+  //
+#if DTBHOB_HALT_AFTER_PUBLISH
+  CpuDeadLoop ();
+#endif
 
   return EFI_SUCCESS;
 }
