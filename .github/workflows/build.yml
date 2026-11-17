@@ -125,6 +125,26 @@ jobs:
           source venv/bin/activate
           python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/myron --require 200
 
+      # The assert neutralisation above stops a vendor ASSERT from halting the
+      # machine, but it does nothing for a CPU exception: Mu's AArch64 DXE
+      # handler ends in ASSERT (FALSE); CpuDeadLoop (), so the first
+      # synchronous external abort in any vendor driver parks the platform and
+      # the log ends at that driver. With 100+ vendor drivers being added back
+      # one group at a time, that turns a single bad MMIO read into a boot that
+      # tells us nothing about the rest.
+      #
+      # This rewrites that halt into "log it, advance ELR past the faulting
+      # instruction, return". The register dump is still printed, and the
+      # platform carries on so the log shows every driver that survived.
+      # Continuing after an abort is not a correct execution model - see the
+      # script's docstring - but it is what makes one boot informative.
+      - name: let a CPU exception skip the faulting instruction
+        run: |
+          source venv/bin/activate
+          python tools/patch-exception-skip.py --mu-root Mu-Silicium
+          grep -n 'SKIP ON FAULT' \
+            Mu-Silicium/Mu_Basecore/UefiCpuPkg/Library/CpuExceptionHandlerLib/AArch64/CpuExceptionHandlerLib.c
+
       # myronPkg 的 DSC/FDF 引用了 UniXNUPkg 和 DarwinBootPkg。
       # UniXNU 的固件构建把 PACKAGES_PATH 设成 {tree}/package:{tree}/drivers/DarwinBoot，
       # 这里等价地把两个包放进了 Platforms/Xiaomi（它已经在 PackagesPath 里）。
