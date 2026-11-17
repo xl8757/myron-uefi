@@ -10,9 +10,10 @@ Two jobs, both done without external tools:
           clusters is read with 12-bit entries by any conforming driver and
           fails to mount.
 
-  sparse  pack a large FAT volume for embedding in the FD. The tail of such a
-          volume is entirely zero, so store only the used prefix plus a 12-byte
-          header; DXE clears the XNU_Payload window and copies the prefix back.
+  repack  rewrite an Android boot image (header v0) with that volume as its
+          ramdisk. build_uefi.py packs whatever sits in Resources/ramdisk, but
+          the payload it should carry is produced by that same run, so the
+          image is rebuilt afterwards instead of racing the build.
 
   refd    replace the firmware volume embedded in the boot image's gzip kernel.
           The workflow builds twice: the first build emits myron-boot.img, the
@@ -66,13 +67,11 @@ def dir_entry(name: bytes, attr: int, cluster: int, size: int) -> bytes:
 
 
 class FatVolume:
-    def __init__(self, total_sectors: int, cluster_sectors: int = 1):
+    def __init__(self, total_sectors: int):
         self.total = total_sectors
-        self.cs = cluster_sectors
-        self.cluster = cluster_sectors * SECTOR
         spf = 1
         while True:
-            clusters = (total_sectors - RESERVED - ROOT_SECTORS - NUM_FATS * spf) // self.cs
+            clusters = (total_sectors - RESERVED - ROOT_SECTORS - NUM_FATS * spf) // CLUSTER_SECTORS
             need = ((clusters + 2) * 3 // 2 + SECTOR - 1) // SECTOR
             if need <= spf:
                 break
@@ -80,7 +79,7 @@ class FatVolume:
         self.spf = spf
         self.clusters = clusters
         if clusters >= 0xFF5:
-            raise SystemExit("卷太大，FAT12 装不下（>4084 簇）：%d，请加大簇" % clusters)
+            raise SystemExit("卷太大，FAT12 装不下（>4084 簇）")
         self.data_start = RESERVED + NUM_FATS * spf + ROOT_SECTORS
         self.fat = [0] * (clusters + 2)
         self.fat[0] = 0xFF8
@@ -99,10 +98,10 @@ class FatVolume:
         return first
 
     def write_chain(self, first: int, blob: bytes) -> None:
-        for i in range(0, len(blob), self.cluster):
-            cur = first + i // self.cluster
-            off = (self.data_start + (cur - 2) * self.cs) * SECTOR
-            self.data[off:off + len(blob[i:i + self.cluster])] = blob[i:i + self.cluster]
+        for i in range(0, len(blob), CLUSTER):
+            cur = first + i // CLUSTER
+            off = (self.data_start + (cur - 2) * CLUSTER_SECTORS) * SECTOR
+            self.data[off:off + len(blob[i:i + CLUSTER])] = blob[i:i + CLUSTER]
 
     def write_root(self, entries) -> None:
         base = (RESERVED + NUM_FATS * self.spf) * SECTOR
@@ -116,7 +115,7 @@ class FatVolume:
         bs[0:3] = b"\xEB\x3C\x90"
         bs[3:11] = b"MSWIN4.1"
         struct.pack_into("<H", bs, 11, SECTOR)
-        bs[13] = self.cs
+        bs[13] = CLUSTER_SECTORS
         struct.pack_into("<H", bs, 14, RESERVED)
         bs[16] = NUM_FATS
         struct.pack_into("<H", bs, 17, ROOT_ENTRIES)
@@ -151,8 +150,8 @@ class FatVolume:
         return bytes(self.data)
 
 
-def build_fat(files: dict, total_sectors: int, cluster_sectors: int = 1) -> bytes:
-    fs = FatVolume(total_sectors, cluster_sectors)
+def build_fat(files: dict, total_sectors: int) -> bytes:
+    fs = FatVolume(total_sectors)
 
     root = {"dirs": {}, "files": [], "cluster": 0, "name": ""}
     for path, blob in files.items():
@@ -177,7 +176,7 @@ def build_fat(files: dict, total_sectors: int, cluster_sectors: int = 1) -> byte
             child = node["dirs"][name]
             entries.append(dir_entry(short_name(name), ATTR_DIR, child["cluster"], 0))
         for name, blob in sorted(node["files"]):
-            count = max(1, (len(blob) + fs.cluster - 1) // fs.cluster)
+            count = max(1, (len(blob) + CLUSTER - 1) // CLUSTER)
             cluster = fs.alloc(count) if blob else 0
             if blob:
                 fs.write_chain(cluster, blob)
@@ -187,7 +186,7 @@ def build_fat(files: dict, total_sectors: int, cluster_sectors: int = 1) -> byte
             fs.write_root(entries)
         else:
             blob = b"".join(entries)
-            if len(blob) > fs.cluster:
+            if len(blob) > CLUSTER:
                 raise SystemExit("目录 %s 太大" % node["name"])
             fs.write_chain(node["cluster"], blob)
         for name in sorted(node["dirs"]):
@@ -196,6 +195,36 @@ def build_fat(files: dict, total_sectors: int, cluster_sectors: int = 1) -> byte
     alloc_dirs(root)
     write_dir(root, None)
     return fs.finalize()
+
+
+def repack(boot: Path, ramdisk: Path, out: Path) -> None:
+    data = boot.read_bytes()
+    if data[:8] != b"ANDROID!":
+        raise SystemExit("不是 Android 启动镜像")
+    kernel_size, _ka, old_rd, _ra = struct.unpack_from("<4I", data, 8)
+    second_size = struct.unpack_from("<I", data, 24)[0]
+    page = struct.unpack_from("<I", data, 36)[0]
+    if struct.unpack_from("<I", data, 1640)[0] != 0:
+        raise SystemExit("只处理 header v0")
+
+    header = bytearray(data[:page])
+    kernel = data[page:page + kernel_size]
+    ramdisk_blob = ramdisk.read_bytes()
+    rd_off = page + ((kernel_size + page - 1) // page) * page
+    second = data[rd_off + ((old_rd + page - 1) // page) * page:
+                  rd_off + ((old_rd + page - 1) // page) * page + second_size]
+
+    struct.pack_into("<I", header, 16, len(ramdisk_blob))
+    # 0x01000000 在本平台未映射，固件读不到。放到 FD_Reserved 下面，
+    # 那段内存已经由 MemoryMapLib 描述（见 Initrd 描述符）。
+    struct.pack_into("<I", header, 20, 0xA6F00000)
+    blob = bytearray(header)
+    for part in (kernel, ramdisk_blob, second):
+        blob += part
+        blob += b"\0" * ((-len(part)) % page)
+    out.write_bytes(bytes(blob))
+    print("boot.img 重打包: kernel %d + ramdisk %d + second %d -> %d 字节"
+          % (len(kernel), len(ramdisk_blob), len(second), len(blob)))
 
 
 def repack_fd(boot: Path, fd: Path, out: Path) -> None:
@@ -235,28 +264,6 @@ def repack_fd(boot: Path, fd: Path, out: Path) -> None:
           % (ks, len(new_kernel), fd_off))
 
 
-def make_sparse(out: Path, src: Path | None, total: int, placeholder: bool) -> None:
-    """UXSP magic + total length + used length + used prefix of the volume."""
-    if placeholder:
-        used, prefix = 0, b""
-    else:
-        if src is None:
-            raise SystemExit("sparse 需要 --in（或用 --placeholder）")
-        volume = src.read_bytes()
-        used = len(volume)
-        while used > 0 and volume[used - 1] == 0:
-            used -= 1
-        total = len(volume)
-        prefix = volume[:used]
-    blob = b"UXSP" + struct.pack("<II", total, used) + prefix
-    out.write_bytes(blob)
-    if placeholder:
-        print("占位稀疏镜像 %s: %d 字节 (total %d)" % (out, len(blob), total))
-    else:
-        print("稀疏镜像 %s: %d -> %d 字节 (%.2f%%)，还原到 %d 字节"
-              % (out, total, len(blob), 100.0 * len(blob) / total, total))
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -266,15 +273,11 @@ def main() -> int:
     f.add_argument("--add", action="append", default=[],
                    help="卷内路径=本地文件，例如 EFI/UNIXNU/UNIXNU.TOM=cfg.toml")
     f.add_argument("--size-kib", type=int, default=1024)
-    f.add_argument("--cluster-sectors", type=int, default=1,
-                   help="每簇扇区数，放大卷时用它把簇数压在 FAT12 上限内")
 
-    s = sub.add_parser("sparse", help="把大 FAT 卷压成稀疏镜像")
-    s.add_argument("--out", type=Path, required=True)
-    s.add_argument("--in", dest="src", type=Path, default=None)
-    s.add_argument("--total", type=lambda x: int(x, 0), default=48 * 1024 * 1024)
-    s.add_argument("--placeholder", action="store_true",
-                   help="只写头部，供第一次构建时 FDF 引用")
+    r = sub.add_parser("repack", help="把 ramdisk 换进 boot.img")
+    r.add_argument("--boot", type=Path, required=True)
+    r.add_argument("--ramdisk", type=Path, required=True)
+    r.add_argument("--out", type=Path, required=True)
 
     d = sub.add_parser("refd", help="把新固件卷换进 boot.img 的 kernel")
     d.add_argument("--boot", type=Path, required=True)
@@ -289,13 +292,13 @@ def main() -> int:
                 raise SystemExit("--add 需要 卷内路径=本地文件")
             dest, src = spec.split("=", 1)
             files[dest.strip("/")] = Path(src).read_bytes()
-        image = build_fat(files, a.size_kib * 1024 // SECTOR, a.cluster_sectors)
+        image = build_fat(files, a.size_kib * 1024 // SECTOR)
         a.out.write_bytes(image)
         print("FAT12 镜像 %s: %d 字节" % (a.out, len(image)))
         for name in sorted(files):
             print("   %-28s %d 字节" % (name, len(files[name])))
-    elif a.cmd == "sparse":
-        make_sparse(a.out, a.src, a.total, a.placeholder)
+    elif a.cmd == "repack":
+        repack(a.boot, a.ramdisk, a.out)
     else:
         repack_fd(a.boot, a.fd, a.out)
     return 0
