@@ -22,6 +22,24 @@ gMemoryDescriptor[] = {
   {"PMIC_MINII_DUMP_REGI", 0x823E0000, 0x00080000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   {"QUP_FW_REGION", 0x82460000, 0x00018000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   {"PVM_FW_REGION", 0x824A0000, 0x00100000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
+
+  // BSP vocabulary for the same physical ranges as the five entries above.
+  //
+  // The vendor DXE binaries are built against the Qualcomm BSP region names and
+  // match them exactly: LocateMemoryRegionByName ends in AsciiStriCmp, and
+  // IortDtDxe asks for "DT BLOB", "XBL DT" or "XBL_DT". The entries above carry
+  // the live myron FDT's reserved-memory node names instead, so every such
+  // lookup returned EFI_NOT_FOUND and the drivers asserted in their entry point.
+  //
+  // These are NoHob on purpose. The range is already described by the entry
+  // above, so adding another HOB descriptor would duplicate the memory map and
+  // trip validate_memory_map.py's overlap check; NoHob keeps the alias visible
+  // to the name lookup without touching the map or the ARM attributes.
+  {"XBL_DT",             0x81A00000, 0x00060000, NoHob, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
+  {"AOP",                0x81C00000, 0x00060000, NoHob, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
+  {"SMEM",               0x81D00000, 0x00200000, NoHob, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},
+  {"PDP_NS",             0x81F00000, 0x00100000, NoHob, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},
+  {"PvmFw",              0x824A0000, 0x00100000, NoHob, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   {"TZ_STAT_REGION", 0x82700000, 0x00100000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   {"QDSS_APPS_REGION", 0x82800000, 0x02000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
   {"DSM_PARTITION_1_REGI", 0x84A00000, 0x05500000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
