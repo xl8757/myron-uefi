@@ -130,11 +130,13 @@ jobs:
       - name: neutralise vendor assert deadloops
         run: |
           source venv/bin/activate
-          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/aston --require 1
+          # The aston set carries no assert-printer deadloops: the patcher reports
+          # "0 call(s) neutralised across 0 module(s)". This was only needed for
+          # the drivers extracted from the phone, which had Xiaomi's DEBUG assert
+          # printer compiled in. Run it non-fatally so a future change to the set
+          # is visible in the log without failing the build.
+          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/aston --require 0 || true
 
-      # myronPkg 的 DSC/FDF 引用了 UniXNUPkg 和 DarwinBootPkg。
-      # UniXNU 的固件构建把 PACKAGES_PATH 设成 {tree}/package:{tree}/drivers/DarwinBoot，
-      # 这里等价地把两个包放进了 Platforms/Xiaomi（它已经在 PackagesPath 里）。
       - name: unixnu packages
         run: |
           git clone --depth 1 https://github.com/xl8757/unixnu-myron-build.git unixnu
