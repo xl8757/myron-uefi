@@ -135,12 +135,10 @@ READ_LOCK_STATUS   = TRUE
   # that region holds ABL leftovers, the scan finds nothing, and every vendor
   # driver that looks the tree up fails.
   #
-  # DtPlatformDxe is the standard answer and the one the sibling platforms use:
-  # it reads the FREEFORM section below by GUID and UI name, so the tree comes
-  # from this image instead of from the bootloader. The custom driver that used
-  # to sit here depended on the x0 ABL passes, which SEC overwrites in
-  # ModuleEntryPoint.S before anything can record it.
-  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  # The vendor stack does not use the standard DT platform protocol; it looks up
+  # gEfiDtbExtensionHobGuid directly. This driver reads the FREEFORM section
+  # below and publishes that HOB, which is what actually unblocks it.
+  INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
   FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
     SECTION RAW = myronPkg/FdtBlob/myron.dtb
     SECTION UI = "DeviceTreeBlob"
