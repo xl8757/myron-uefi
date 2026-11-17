@@ -26,34 +26,8 @@ from uefi_firmware.uefi import FirmwareFile, FirmwareVolume
 ROOT = Path(__file__).resolve().parent
 URL = ('https://github.com/XiaomiFirmwareUpdaterReleases/firmware_xiaomi_myron/releases/download/'
        'stable-31.10.2025/fw_myron_myron-ota_full-OS3.0.13.0.WPMCNXM-user-16.0-18cc0bfb5e.zip')
-# The pins below are HyperOS 4.0.6.0 (OS4.0.6.0.WPMCNXM), the firmware this device
-# actually runs. They replace the 3.0.13.0 set the package originally pinned: that
-# image has 219 vendor inputs, this one 236, and 98 of the 216 shared binaries differ -
-# including DisplayDxe, which grew by 12288 bytes and is the driver the 23-second
-# reset was attributed to. URL above is kept for reference; --image is the supported
-# path now, because the 4.0.6.0 package is a local download.
-ZIP_SHA256 = 'd083b0ee0be62d6cf299575954512ca682a805c7264f1b6f677ab7feb5bc8f3f'
-IMAGE_SHA256 = '5a16c74bec9c014a14423066643e38956d93fdd416280df4243fad681f2111cd'
-# The download path below still points at the 3.0.13.0 release, so its image wins
-# from that archive; the two committed images are the supported route.
-ZIP_IMAGE_SHA256 = 'e5b65a67fe6777d6fe6868cad23d842fd8486cbc5cef3a497b17bc9256ffc702'
-
-
-# Two firmware sets are carried. 4.0.6.0 is what the device runs and what the
-# build uses; 3.0.13.0 is kept because it is the only set that predates the DXE
-# entry-point ASSERT seen on hardware, so it is the control for bisecting that.
-FW_CHOICES = {
-    '4.0.6.0': {
-        'image': ROOT / 'Resources/inputs/uefi-4.0.6.0.img',
-        'sha256': '5a16c74bec9c014a14423066643e38956d93fdd416280df4243fad681f2111cd',
-        'inputs': ROOT / 'Resources/inputs/vendor-inputs-4.0.6.0.json',
-    },
-    '3.0.13.0': {
-        'image': ROOT / 'Resources/inputs/uefi-3.0.13.0.img',
-        'sha256': 'e5b65a67fe6777d6fe6868cad23d842fd8486cbc5cef3a497b17bc9256ffc702',
-        'inputs': ROOT / 'Resources/inputs/vendor-inputs-3.0.13.0.json',
-    },
-}
+ZIP_SHA256 = '7c015caaff578399408b0f580ca0a8170ec964f3f69596399d36a1666e3edf73'
+IMAGE_SHA256 = 'e5b65a67fe6777d6fe6868cad23d842fd8486cbc5cef3a497b17bc9256ffc702'
 
 
 def sha256(data):
@@ -73,9 +47,9 @@ def elf_volume(data):
     return fv
 
 
-def extract(data, output, expected, EXPECTED_IMAGE_SHA256):
-    if sha256(data) != EXPECTED_IMAGE_SHA256:
-        raise ValueError('myron uefi.img SHA-256 mismatch: ' + sha256(data))
+def extract(data, output, expected):
+    if sha256(data) != IMAGE_SHA256:
+        raise ValueError('myron uefi.img SHA-256 mismatch')
     fv = elf_volume(data)
     found = {}
 
@@ -122,22 +96,6 @@ def extract(data, output, expected, EXPECTED_IMAGE_SHA256):
             walk(child)
 
     walk(fv)
-    # Panel descriptors the 4.0.6.0 package renamed, recovered from 3.0.13.0 and
-    # kept under Resources/inputs/raw-compat. Mu-Silicium's Extra.fdf.inc names
-    # RawFiles/Panel_* unconditionally, so the build stops on any that are absent
-    # even though USE_CUSTOM_DISPLAY_DRIVER is 0 and DisplayDxe is not linked.
-    compat = ROOT / 'Resources/inputs/raw-compat'
-    if compat.is_dir():
-        raw_dir = output / 'RawFiles'
-        raw_dir.mkdir(parents=True, exist_ok=True)
-        for item in sorted(compat.iterdir()):
-            if item.suffix == '.json' or not item.is_file():
-                continue
-            if item.name in found or (raw_dir / item.name).exists():
-                continue
-            (raw_dir / item.name).write_bytes(item.read_bytes())
-            found[item.name] = True
-            print(f'compat panel: {item.name}')
     missing = set(expected) - set(found)
     if missing:
         raise ValueError('missing vendor inputs: ' + ', '.join(sorted(missing)))
@@ -148,24 +106,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mu-root', type=Path, required=True, help='Mu-Silicium checkout (--uefi)')
     parser.add_argument('--image', type=Path, help='local uefi.img; otherwise download the pinned package')
-    parser.add_argument('--firmware', default='4.0.6.0', choices=FW_CHOICES,
-                        help='which HyperOS firmware the inputs come from; both are kept '
-                             'so a regression can be bisected by switching one value')
     args = parser.parse_args()
-    chosen = FW_CHOICES[args.firmware]
-    expected = __import__('json').loads(chosen['inputs'].read_text())
-    print(f'firmware {args.firmware}: {len(expected)} pinned inputs')
+    expected = __import__('json').loads((ROOT / 'Resources/vendor-inputs.json').read_text())
     output = args.mu_root / 'Binaries/myron'
-    # A local --image wins, then the image committed beside this script, then the
-    # download. The committed copy exists because the 4.0.6.0 package the device
-    # runs is a local download and CI cannot fetch it; committing the 2.7 MiB
-    # uefi.img keeps the build reproducible without redistributing the 8.2 GiB zip.
-    pinned = chosen['image']
     if args.image:
-        extract(args.image.read_bytes(), output, expected, chosen['sha256'])
-        return
-    if pinned.is_file():
-        extract(pinned.read_bytes(), output, expected, chosen['sha256'])
+        extract(args.image.read_bytes(), output, expected)
         return
     with tempfile.TemporaryDirectory(prefix='myron-firmware-') as name:
         archive = Path(name) / 'firmware.zip'
@@ -174,7 +119,7 @@ def main():
         if sha256(data) != ZIP_SHA256:
             raise ValueError('myron firmware package SHA-256 mismatch')
         with zipfile.ZipFile(archive) as firmware:
-            extract(firmware.read('firmware-update/uefi.img'), output, expected, ZIP_IMAGE_SHA256)
+            extract(firmware.read('firmware-update/uefi.img'), output, expected)
 
 
 if __name__ == '__main__':
