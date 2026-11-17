@@ -115,23 +115,22 @@ jobs:
           venv/bin/pip install uefi_firmware
           venv/bin/pip install capstone
 
+      # Not needed any more. The platform package now builds against the aston
+      # vendor binaries that Mu-Silicium already carries as its Binaries
+      # submodule, the same set the sibling SM8850 package boots this phone with.
+      # The extractor pulled myron's own firmware DXE drivers instead, which is
+      # a different ABI generation and is what the assertions came from. The
+      # script and its pinned inputs stay in the repository, unused, so the
+      # comparison remains reproducible.
       - name: vendor inputs
-        env:
-          FW_VERSION: ${{ inputs.firmware || '4.0.6.0' }}
         run: |
-          source venv/bin/activate
-          python fetch_vendor_inputs.py --mu-root Mu-Silicium --firmware "$FW_VERSION"
-          echo "firmware set: $FW_VERSION"
-          ls Mu-Silicium/Binaries/myron | wc -l
+          echo "skipped: building against Mu-Silicium's Binaries/aston"
+          ls Mu-Silicium/Binaries | head -20
 
-      # Xiaomi 的预编译 DXE 是 DEBUG 构建，断言里烧死了 CpuDeadLoop：一个返回
-      # EFI_NOT_FOUND 的库构造函数就能把整机停死，而我们改 PcdDebugPropertyMask
-      # 也管不到他们的镜像。把断言打印机里那两处调用（inertial delay 与
-      # CpuDeadLoop）改成 nop，打印照旧、栈平衡不变，效果等同 RELEASE 构建。
       - name: neutralise vendor assert deadloops
         run: |
           source venv/bin/activate
-          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/myron --require 200
+          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/aston --require 1
 
       # myronPkg 的 DSC/FDF 引用了 UniXNUPkg 和 DarwinBootPkg。
       # UniXNU 的固件构建把 PACKAGES_PATH 设成 {tree}/package:{tree}/drivers/DarwinBoot，
