@@ -54,8 +54,8 @@ for entry in entries:
 # A write-back mapping of either one loses writes the firmware never sees.
 for name, attribute in (
     ("Display_Reserved", "WRITE_THROUGH_XN"),
-    ("SMEM_REGION", "UNCACHED_UNBUFFERED_XN"),
-    ("PDP_NS_SHARED_REGION", "UNCACHED_UNBUFFERED_XN"),
+    ("SMEM", "UNCACHED_UNBUFFERED_XN"),
+    ("PDP_NS", "UNCACHED_UNBUFFERED_XN"),
     ("SHM", "UNCACHED_UNBUFFERED_XN"),
 ):
     if not re.search(r'\{"' + re.escape(name) + r'"[^\n]*,\s*' + attribute + r'\}', text):
