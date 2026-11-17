@@ -1,166 +1,44 @@
 /** @file
-  Publish the device tree the Qualcomm vendor stack expects.
+  Publish the device tree to DXE the way the Qualcomm stack expects it.
 
-  Mu's PlatformPeiLib derives the DtbExtension address by scanning the
-  "FD Reserved" region for the stock UEFI's HOB registration function and
-  decoding its ADRP instructions (XblProtocols.c). That only works when the
-  stock firmware is the one running, because the stock image is what sits in
-  that region.
+  Mu's PlatformPeiLib builds the gEfiDtbExtensionHobGuid HOB by scanning the
+  "FD Reserved" memory region for the HOB registration function of the stock
+  UEFI image and decoding its ADRP instructions (see XblProtocols.c). That works
+  when the stock firmware is the one running, because the stock image is what
+  sits in that region.
 
-  Under "fastboot boot" the region holds whatever ABL left there, the scan finds
-  nothing, no DtbExtension HOB is built, and every vendor DXE driver that
-  resolves its regions through the tree fails its lookup. EnvDxeEnhanced is the
-  first of them; its SmemLib then asserts on an uninitialised lock, and the same
-  failure cascades into SmemDxe and the rest.
+  It cannot work for a payload booted with "fastboot boot": the region holds
+  whatever ABL left there, not a stock UEFI, so the scan finds nothing, no
+  DtbExtension HOB is built, and every vendor DXE driver that resolves its
+  regions through the device tree fails its lookup. EnvDxeEnhanced is the first
+  of them, and its SmemLib then asserts on an uninitialised lock.
 
-  The tree is already in this image: myron.fdf embeds it as a FREEFORM file with
-  GUID 25462CDA-221F-47DF-AC1D-259CFAA4E326 and UI "DeviceTreeBlob". This driver
-  reads that section and republishes it under gEfiDtbExtensionHobGuid, which is
-  the only thing the vendor stack actually looks for.
+  Mu's SEC already records the x0 argument ABL hands over - the live device
+  tree, with the dtbo overlay applied - in a GUID HOB. This driver republishes
+  that same address under the GUID the vendor drivers look for. It runs as the
+  first DXE driver, ahead of EnvDxeEnhanced and the rest of the vendor stack.
 
-  Why not reuse EmbeddedPkg's DtPlatformDxe: that driver publishes the tree
-  through the EFI_DT_PLATFORM_PROTOCOL / configuration-table path. The Qualcomm
-  drivers do not consult it; they look up gEfiDtbExtensionHobGuid directly, so
-  both have to be present and it is this HOB that unblocks them.
-
-  It runs from APRIORI, ahead of EnvDxeEnhanced and the rest of the vendor
-  stack, because the HOB has to exist before the first lookup.
-
-  Copyright (c) 2026, myron port.
-  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Uefi.h>
-#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
-#include <Library/DxeServicesLib.h>
 #include <Library/HobLib.h>
-#include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
-#include "ScreenFont.h"
-
 //
-// The FREEFORM file myron.fdf embeds:
-//     FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326
-//       SECTION RAW = myronPkg/FdtBlob/myron.dtb
-//       SECTION UI  = "DeviceTreeBlob"
+// Mu-Silicium SEC stores the incoming x0 value in this HOB as a UINT64.
 //
-STATIC CONST EFI_GUID  mDeviceTreeBlobGuid = {
-  0x25462CDA, 0x221F, 0x47DF, { 0xAC, 0x1D, 0x25, 0x9C, 0xFA, 0xA4, 0xE3, 0x26 }
+STATIC CONST EFI_GUID  mEntryArgHobGuid = {
+  0xDAEE82E6, 0x8090, 0x4E72, { 0xBF, 0xB9, 0x78, 0xC1, 0x3C, 0xD4, 0xE3, 0x59 }
 };
 
-//
-// Draw on the panel framebuffer directly.
-//
-// The board has no UART, and DEBUG output from this driver did not reach the
-// panel on hardware even though the same channel printed the DXE core's own
-// lines. This is the channel that is known to work here: it is what the SEC
-// stage messages and the shim use, and those are visible.
-//
-#define DTBHOB_FB_BASE   0xfc800000ULL
-#define DTBHOB_FB_WIDTH  1200U
-#define DTBHOB_FB_HEIGHT 2608U
-#define DTBHOB_FB_STRIDE 1200U
-#define DTBHOB_FB_SCALE  2U
-#define DTBHOB_FB_MARGIN 24U
-
-//
-// Stop after publishing so the report stays visible. 0 returns to letting the
-// vendor stack continue.
-//
-#ifndef DTBHOB_HALT_AFTER_PUBLISH
-#define DTBHOB_HALT_AFTER_PUBLISH  1
-#endif
-#define DTBHOB_FB_BG     0xff102040U
-#define DTBHOB_FB_FG     0xffffffffU
-
-//
-// Start at the top of the screen. The SEC stage wrote its own log at rows 0..17
-// and the DXE console draws from row 0 as well, so a report parked further down
-// gets overwritten by the ASSERT text the dispatcher prints afterwards. Writing
-// over rows 0..12 keeps this report as the last thing visible.
-//
-STATIC UINTN  mRow = 0;
-
-STATIC
-VOID
-Say (
-  IN CONST CHAR8  *Text
-  )
-{
-  volatile UINT32  *Fb = (volatile UINT32 *)(UINTN)DTBHOB_FB_BASE;
-  UINTN             X  = DTBHOB_FB_MARGIN;
-  UINTN             Y  = DTBHOB_FB_MARGIN + mRow * 16U * DTBHOB_FB_SCALE;
-  UINTN             Gy;
-  UINTN             Gx;
-
-  if (Y + 16U * DTBHOB_FB_SCALE > DTBHOB_FB_HEIGHT) {
-    return;
-  }
-
-  for (Gy = 0; Gy < 16U * DTBHOB_FB_SCALE; Gy++) {
-    for (Gx = DTBHOB_FB_MARGIN; Gx < DTBHOB_FB_WIDTH - DTBHOB_FB_MARGIN; Gx++) {
-      Fb[(Y + Gy) * DTBHOB_FB_STRIDE + Gx] = DTBHOB_FB_BG;
-    }
-  }
-
-  while ((*Text != '\0') && (X + 8U * DTBHOB_FB_SCALE <= DTBHOB_FB_WIDTH - DTBHOB_FB_MARGIN)) {
-    UINTN         Ch = (UINTN)(UINT8)*Text++;
-    CONST UINT8  *Glyph;
-
-    if ((Ch < 0x20) || (Ch > 0x7e)) {
-      Ch = '?';
-    }
-
-    Glyph = font8x16[Ch - 0x20];
-    for (Gy = 0; Gy < 16; Gy++) {
-      volatile UINT32  *Line = Fb + (Y + Gy * DTBHOB_FB_SCALE) * DTBHOB_FB_STRIDE + X;
-      for (Gx = 0; Gx < 8; Gx++) {
-        UINT32  Color = (Glyph[Gy] & (0x80U >> Gx)) ? DTBHOB_FB_FG : DTBHOB_FB_BG;
-        Line[Gx * DTBHOB_FB_SCALE]                        = Color;
-        Line[Gx * DTBHOB_FB_SCALE + 1]                    = Color;
-        Line[DTBHOB_FB_STRIDE + Gx * DTBHOB_FB_SCALE]     = Color;
-        Line[DTBHOB_FB_STRIDE + Gx * DTBHOB_FB_SCALE + 1] = Color;
-      }
-    }
-
-    X += 8U * DTBHOB_FB_SCALE;
-  }
-
-  __asm__ volatile ("dsb sy" ::: "memory");
-  mRow++;
-}
-
-STATIC
-VOID
-SayHex (
-  IN CONST CHAR8           *Label,
-  IN EFI_PHYSICAL_ADDRESS  Value
-  )
-{
-  CHAR8  Buffer[72];
-  UINTN  At = 0;
-  UINTN  Shift;
-
-  while ((*Label != '\0') && (At < 48)) {
-    Buffer[At++] = *Label++;
-  }
-
-  Buffer[At++] = ' ';
-  Buffer[At++] = '0';
-  Buffer[At++] = 'x';
-  for (Shift = 16; Shift > 0; Shift--) {
-    UINTN  Digit = (UINTN)((Value >> ((Shift - 1) * 4)) & 0xF);
-    Buffer[At++] = (CHAR8)(Digit < 10 ? '0' + Digit : 'A' + Digit - 10);
-  }
-
-  Buffer[At] = '\0';
-  Say (Buffer);
-}
-
 /**
-  Read a 32-bit big-endian word out of a device tree header.
+  Read a 32-bit big-endian word out of the device tree header.
+
+  @param[in] Base  Candidate device tree.
+  @param[in] Off   Byte offset inside the header.
+
+  @retval  The word at Off, or MAX_UINT32 when Base is not a device tree.
 **/
 STATIC
 UINT32
@@ -175,28 +53,32 @@ FdtWord (
 
 /**
   Decide whether an address carries a plausible flattened device tree.
+
+  @param[in] Address  Candidate address.
+
+  @retval TRUE   The magic, the size and the two block offsets all line up.
+  @retval FALSE  Anything else.
 **/
 STATIC
 BOOLEAN
 IsDeviceTree (
-  IN CONST UINT8  *Base
+  IN EFI_PHYSICAL_ADDRESS  Address
   )
 {
-  UINT32  Total;
-  UINT32  Struct;
-  UINT32  Strings;
+  CONST UINT8  *Base;
 
-  if (Base == NULL) {
+  if ((Address == 0) || ((Address & 3) != 0)) {
     return FALSE;
   }
 
+  Base = (CONST UINT8 *)(UINTN)Address;
   if (FdtWord (Base, 0) != 0xD00DFEED) {
     return FALSE;
   }
 
-  Total   = FdtWord (Base, 4);
-  Struct  = FdtWord (Base, 8);
-  Strings = FdtWord (Base, 12);
+  UINT32 Total  = FdtWord (Base, 4);
+  UINT32 Struct = FdtWord (Base, 8);
+  UINT32 Strings = FdtWord (Base, 12);
 
   if ((Total < 0x40) || (Struct < 0x28) || (Struct >= Total) ||
       (Strings >= Total) || (Struct <= Strings))
@@ -208,12 +90,14 @@ IsDeviceTree (
 }
 
 /**
-  Publish the embedded tree as the DtbExtension HOB the vendor stack reads.
+  Build the DtbExtension HOB from the device tree ABL passed in x0.
 
-  @param[in]  ImageHandle  The firmware allocated handle for the EFI image.
-  @param[in]  SystemTable  A pointer to the EFI System Table.
+  Returning an error here would make the dispatcher print a load failure and
+  move on, which only adds noise: the interesting diagnostic is the DEBUG line.
+  Always report success and let the next driver fail loudly if the tree is
+  genuinely missing.
 
-  @retval EFI_SUCCESS  The HOB was published, or an earlier one already existed.
+  @retval EFI_SUCCESS  Always.
 **/
 EFI_STATUS
 EFIAPI
@@ -222,68 +106,35 @@ DtbExtensionHobEntry (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS           Status;
-  VOID                 *Blob;
-  UINTN                Size;
-  EFI_PHYSICAL_ADDRESS Address;
-
-  Say ("DTBHOB: entry");
+  EFI_HOB_GUID_TYPE     *Hob;
+  EFI_PHYSICAL_ADDRESS  Dtb;
+  EFI_PHYSICAL_ADDRESS  Existing;
 
   if (GetFirstGuidHob (&gEfiDtbExtensionHobGuid) != NULL) {
-    Say ("DTBHOB: already published, keeping it");
+    DEBUG ((DEBUG_ERROR, "DTBHOB: DtbExtension already published, keeping it\n"));
     return EFI_SUCCESS;
   }
 
-  //
-  // GetSectionFromAnyFv is the lookup UniXNURamDiskDxe already uses in this
-  // firmware for its own FREEFORM sections, so it is known to work here.
-  //
-  Status = GetSectionFromAnyFv (&mDeviceTreeBlobGuid, EFI_SECTION_RAW, 0, &Blob, &Size);
-  if (EFI_ERROR (Status)) {
-    SayHex ("DTBHOB: no DeviceTreeBlob, status ", (EFI_PHYSICAL_ADDRESS)Status);
-    Say ("DTBHOB: vendor drivers will fail to resolve the tree");
+  Hob = GetFirstGuidHob (&mEntryArgHobGuid);
+  if (Hob == NULL) {
+    DEBUG ((DEBUG_ERROR, "DTBHOB: no entry argument HOB, ABL passed no tree\n"));
     return EFI_SUCCESS;
   }
 
-  SayHex ("DTBHOB: blob size ", (EFI_PHYSICAL_ADDRESS)Size);
-  SayHex ("DTBHOB: blob at ", (EFI_PHYSICAL_ADDRESS)(UINTN)Blob);
-
-  if (!IsDeviceTree ((CONST UINT8 *)Blob)) {
-    SayHex ("DTBHOB: magic ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)Blob, 0));
-    Say ("DTBHOB: blob is not a device tree");
+  if (GET_GUID_HOB_DATA_SIZE (Hob) < sizeof (UINT64)) {
+    DEBUG ((DEBUG_ERROR, "DTBHOB: entry argument HOB too small\n"));
     return EFI_SUCCESS;
   }
 
-  SayHex ("DTBHOB: tree size ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)Blob, 4));
-
-  Address = (EFI_PHYSICAL_ADDRESS)(UINTN)Blob;
-
-  //
-  // BuildGuidDataHob returns the HOB pointer, not an EFI_STATUS, and has no
-  // failure mode worth reporting; verify the HOB exists instead.
-  //
-  BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &Address, sizeof (Address));
-  if (GetFirstGuidHob (&gEfiDtbExtensionHobGuid) == NULL) {
-    Say ("DTBHOB: the HOB did not appear after building it");
+  Dtb = *(CONST UINT64 *)GET_GUID_HOB_DATA (Hob);
+  if (!IsDeviceTree (Dtb)) {
+    DEBUG ((DEBUG_ERROR, "DTBHOB: x0 0x%lx is not a device tree\n", Dtb));
     return EFI_SUCCESS;
   }
 
-  SayHex ("DTBHOB: OK published the tree at ", Address);
-
-  //
-  // Diagnostic build: stop here instead of letting the vendor stack run.
-  //
-  // The report above is the only evidence of whether the HOB was published, and
-  // the dispatcher's own console output overwrites it within a second. Halting
-  // makes the report the last thing on screen, so one boot distinguishes
-  // "the HOB is published and something else breaks" from "this driver never
-  // got that far".
-  //
-  // Set DTBHOB_HALT_AFTER_PUBLISH to 0 to continue into the vendor stack.
-  //
-#if DTBHOB_HALT_AFTER_PUBLISH
-  CpuDeadLoop ();
-#endif
+  Existing = Dtb;
+  BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &Existing, sizeof (Existing));
+  DEBUG ((DEBUG_ERROR, "DTBHOB: published device tree at 0x%lx\n", Dtb));
 
   return EFI_SUCCESS;
 }
