@@ -40,6 +40,9 @@
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/UefiLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Protocol/FirmwareVolume2.h>
 
 #include "ScreenFont.h"
 
@@ -132,6 +135,15 @@ ScreenLine (
 //
 STATIC CONST EFI_GUID  mEntryArgHobGuid = {
   0xDAEE82E6, 0x8090, 0x4E72, { 0xBF, 0xB9, 0x78, 0xC1, 0x3C, 0xD4, 0xE3, 0x59 }
+};
+
+//
+// The FREEFORM file myronPkg/Include/RAW.inc embeds: SECTION UI "myron.dtb",
+// SECTION RAW myronPkg/FdtBlob/myron.dtb. Same GUID as the INF so the two stay
+// together.
+//
+STATIC CONST EFI_GUID  mFdtBlobGuid = {
+  0x6B1F4C52, 0x8E57, 0x4C1D, { 0x9E, 0x3A, 0x2F, 0x0B, 0x7A, 0x5D, 0x94, 0xC1 }
 };
 
 /**
@@ -297,6 +309,82 @@ Fail (
 }
 
 /**
+  Copy the embedded device tree out of the firmware volume.
+
+  Reads the FREEFORM section RAW.inc defines and hands back a buffer the caller
+  owns. The buffer has to outlive the HOB: vendor drivers treat the published
+  address as the live tree, so it cannot be freed after publishing.
+
+  @param[out] Buffer  Receives the allocated copy of the blob.
+  @param[out] Size    Receives its size in bytes.
+
+  @retval EFI_SUCCESS  The section was found and copied.
+  @retval Others       No matching volume or section.
+**/
+STATIC
+EFI_STATUS
+LoadBlobFromFv (
+  OUT VOID   **Buffer,
+  OUT UINTN  *Size
+  )
+{
+  EFI_STATUS                      Status;
+  EFI_HANDLE                      *Handles;
+  UINTN                           HandleCount;
+  UINTN                           Index;
+  UINTN                           Attempt;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL   *Fv;
+
+  *Buffer = NULL;
+  *Size   = 0;
+
+  //
+  // This driver sits in APRIORI, so at first pass the volume that carries the
+  // section may not be published yet. Retry a bounded number of times instead
+  // of giving up on the first miss.
+  //
+  for (Attempt = 0; Attempt < 20; Attempt++) {
+    Status = gBS->LocateHandleBuffer (
+                    ByProtocol,
+                    &gEfiFirmwareVolume2ProtocolGuid,
+                    NULL,
+                    &HandleCount,
+                    &Handles
+                    );
+    if (EFI_ERROR (Status)) {
+      gBS->Stall (10000);
+      continue;
+    }
+
+    for (Index = 0; Index < HandleCount; Index++) {
+      Status = gBS->HandleProtocol (Handles[Index], &gEfiFirmwareVolume2ProtocolGuid, (VOID **)&Fv);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+
+      Status = Fv->ReadSection (
+                     Fv,
+                     &mFdtBlobGuid,
+                     EFI_SECTION_RAW,
+                     0,
+                     Buffer,
+                     Size,
+                     NULL
+                     );
+      if (!EFI_ERROR (Status)) {
+        gBS->FreePool (Handles);
+        return EFI_SUCCESS;
+      }
+    }
+
+    gBS->FreePool (Handles);
+    gBS->Stall (10000);
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+/**
   Build the DtbExtension HOB from the device tree ABL passed in x0.
 
   @param[in]  ImageHandle  The firmware allocated handle for the EFI image.
@@ -314,6 +402,9 @@ DtbExtensionHobEntry (
   EFI_HOB_GUID_TYPE     *Hob;
   EFI_PHYSICAL_ADDRESS  Dtb;
   EFI_PHYSICAL_ADDRESS  Existing;
+  EFI_STATUS            Status;
+  VOID                  *Blob;
+  UINTN                 BlobSize;
 
   mSystemTable = SystemTable;
 
@@ -330,9 +421,44 @@ DtbExtensionHobEntry (
     return EFI_SUCCESS;
   }
 
+  //
+  // Preferred path: the tree embedded in this firmware image.
+  //
+  // The bootloader's tree is not available here. Mu's ModuleEntryPoint.S runs
+  // "EL1_OR_EL2 (x0)" before anything records the argument, so the address ABL
+  // passes is gone by the time any driver could read it, and the HOB that was
+  // supposed to carry it is never built. Reading the FREEFORM section instead
+  // makes the vendor stack independent of that handoff.
+  //
+  Status = LoadBlobFromFv (&Blob, &BlobSize);
+  if (!EFI_ERROR (Status)) {
+    SayHex ("DTBHOB: embedded blob size ", (EFI_PHYSICAL_ADDRESS)BlobSize);
+    SayHex ("DTBHOB: embedded blob at ", (EFI_PHYSICAL_ADDRESS)(UINTN)Blob);
+
+    if (!IsDeviceTree ((EFI_PHYSICAL_ADDRESS)(UINTN)Blob)) {
+      SayHex ("DTBHOB: magic ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)Blob, 0));
+      return Fail ("the embedded blob is not a flattened device tree");
+    }
+
+    Dtb = (EFI_PHYSICAL_ADDRESS)(UINTN)Blob;
+    SayHex ("DTBHOB: tree size ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)Blob, 4));
+
+    Existing = Dtb;
+    BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &Existing, sizeof (Existing));
+    SayHex ("DTBHOB: OK published the embedded tree at ", Dtb);
+    return EFI_SUCCESS;
+  }
+
+  SayHex ("DTBHOB: no embedded blob, status ", (EFI_PHYSICAL_ADDRESS)Status);
+
+  //
+  // Fallback: whatever SEC managed to record. Kept because a bootloader that
+  // does preserve x0 would make the embedded copy unnecessary, and this path
+  // says which of the two happened.
+  //
   Hob = GetFirstGuidHob (&mEntryArgHobGuid);
   if (Hob == NULL) {
-    return Fail ("no entry argument HOB; SEC did not record x0");
+    return Fail ("no embedded DTB and no entry argument HOB");
   }
 
 #if DTBHOB_VERBOSE
