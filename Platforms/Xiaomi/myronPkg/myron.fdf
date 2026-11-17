@@ -113,36 +113,27 @@ READ_LOCK_STATUS   = TRUE
     SECTION UI = "PayloadVolume"
   }
 
-  # 48 MiB 大卷的稀疏副本（12 B 头 + 有效前缀，约 120 KB）。ABL 会忽略
-  # boot ramdisk，厂商 UFS 驱动栈在内存启动下又会死锁，唯一能到设备的通道
-  # 就是 FD 本身；DXE 把这份数据还原到 XNU_Payload 预留区 0xF0000000。
-  # 与 UniXNURamDiskDxe 同在 FvMain，保证 GetSectionFromAnyFv 能找到。
-  FILE FREEFORM = B2C3D4E5-6F7A-4B8C-9D0E-1F2A3B4C5D6E {
-    SECTION RAW = myronPkg/Payload/payload-big.sparse
-    SECTION UI = "BigPayloadSparse"
-  }
-
   INF DarwinBootPkg/Driver/DarwinBoot.inf
+
+  # 路标驱动（屏幕色带），用于定位复位点
 
   # IORT DT
   INF QcomPkg/Drivers/IortDtDxe/IortDtDxe.inf
 
   # Device Tree
   #
-  # Vendor drivers resolve their regions through the tree, so something has to
-  # publish it. Mu's default path scans the FD Reserved region for the stock
-  # UEFI's HOB registration function (XblProtocols.c); under "fastboot boot"
-  # that region holds ABL leftovers, the scan finds nothing, and every vendor
-  # driver that looks the tree up fails.
-  #
-  # The vendor stack does not use the standard DT platform protocol; it looks up
-  # gEfiDtbExtensionHobGuid directly. This driver reads the FREEFORM section
-  # below and publishes that HOB, which is what actually unblocks it.
-  INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
-  FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
-    SECTION RAW = myronPkg/FdtBlob/myron.dtb
-    SECTION UI = "DeviceTreeBlob"
-  }
+  # Off on purpose, matching the sibling SM8850 package that boots this phone.
+  # Mu derives the DtbExtension HOB from the stock UEFI image found in the FD
+  # Reserved region, which does not exist under "fastboot boot", and the vendor
+  # drivers fall back to their own defaults instead of requiring the tree. The
+  # FREEFORM blob and DtPlatformDxe are left out as well: with them in the build
+  # the tree was published but the vendor stack still asserted, so they were not
+  # what it was missing.
+  #INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  #FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
+  #  SECTION RAW = myronPkg/FdtBlob/myron.dtb
+  #  SECTION UI = "DeviceTreeBlob"
+  #}
 
   !include QcomPkg/Extra.fdf.inc
 
