@@ -42,6 +42,15 @@
 #include <Library/UefiLib.h>
 
 //
+// BootShim/ScreenLog.c writes the 0xfc800000 framebuffer with general registers
+// only, and PlatformSecLib re-includes it, so the symbol is in this firmware.
+// It is the one channel proven to reach the panel on this board: the board has
+// no UART, and neither DEBUG nor ConOut from this module appeared on hardware
+// while the DXE core's own ConOut lines did.
+//
+extern void myron_screen_line (const char *Text, unsigned Row);
+
+//
 // Halt instead of returning when the tree cannot be republished, so the report
 // stays visible. 0 restores the original quiet behaviour.
 //
@@ -65,14 +74,17 @@ STATIC CONST EFI_GUID  mEntryArgHobGuid = {
 };
 
 /**
-  Print an ASCII string straight to ConOut.
+  Draw one line of the report on the panel and echo it to ConOut.
 
-  DEBUG output from this module never reached the console on hardware, so the
-  report uses the same interface the DXE core's load banner uses.
+  Neither DEBUG nor ConOut from this module reached the console on hardware,
+  while the DXE core's own ConOut lines did, and the board has no UART. The
+  framebuffer writer below is the channel that is known to work here: it is the
+  one the SEC stage messages use, and those are visible.
 
-  @param[in] Text  NUL-terminated ASCII text.
+  @param[in] Text  NUL-terminated ASCII text; the part before any newline.
 **/
 STATIC EFI_SYSTEM_TABLE  *mSystemTable;
+STATIC UINTN             mRow = 20;
 
 STATIC
 VOID
@@ -80,19 +92,33 @@ Say (
   IN CONST CHAR8  *Text
   )
 {
-  CHAR16  Buffer[160];
+  CHAR8   Line[64];
   UINTN   Index;
 
-  if ((mSystemTable == NULL) || (mSystemTable->ConOut == NULL)) {
-    return;
+  //
+  // One framebuffer row per call, so the report is a list of lines rather than
+  // one overwritten row. myron_screen_line takes a single row number.
+  //
+  for (Index = 0; (Index < sizeof (Line) - 1) && (Text[Index] != '\0') && (Text[Index] != '\n'); Index++) {
+    Line[Index] = Text[Index];
   }
 
-  for (Index = 0; (Index < ARRAY_SIZE (Buffer) - 1) && (Text[Index] != '\0'); Index++) {
-    Buffer[Index] = (CHAR16)Text[Index];
-  }
+  Line[Index] = '\0';
+  myron_screen_line (Line, (unsigned)mRow);
+  mRow++;
 
-  Buffer[Index] = L'\0';
-  mSystemTable->ConOut->OutputString (mSystemTable->ConOut, Buffer);
+  //
+  // Also try ConOut: harmless when it works, ignored when it does not.
+  //
+  if ((mSystemTable != NULL) && (mSystemTable->ConOut != NULL)) {
+    CHAR16  Wide[64];
+    for (Index = 0; (Index < ARRAY_SIZE (Wide) - 1) && (Line[Index] != '\0'); Index++) {
+      Wide[Index] = (CHAR16)Line[Index];
+    }
+    Wide[Index]   = L'\0';
+    Wide[Index + 1] = L'\0';
+    mSystemTable->ConOut->OutputString (mSystemTable->ConOut, Wide);
+  }
 }
 
 /**
