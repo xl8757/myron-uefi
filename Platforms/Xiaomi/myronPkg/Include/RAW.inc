@@ -560,7 +560,7 @@
   # the firmware image instead of from the bootloader. myronPkg/FdtBlob/myron.dtb
   # is the stock tree captured off the device; DtbExtensionHobDxe reads this
   # section and republishes the address under gEfiDtbExtensionHobGuid.
-  FILE FREEFORM = 6B1F4C52-8E57-4C1D-9E3A-2F0B7A5D94C1 {
+  FILE FREEFORM = A7C41B93-6D2E-4F58-9B01-3C8E5F7A2D64 {
     SECTION UI = "myron.dtb"
     SECTION RAW = myronPkg/FdtBlob/myron.dtb
   }
