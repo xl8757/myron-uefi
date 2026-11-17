@@ -29,11 +29,6 @@ on:
         type: choice
         options: [DEBUG, RELEASE]
         default: DEBUG
-      firmware:
-        description: "vendor input set: 4.0.6.0 is what the device runs; 3.0.13.0 is the control for the DXE entry-point ASSERT seen on hardware"
-        type: choice
-        options: ["4.0.6.0", "3.0.13.0"]
-        default: "4.0.6.0"
   push:
     paths:
       - 'Platforms/**'
@@ -103,14 +98,6 @@ jobs:
           git -C Mu-Silicium checkout -q FETCH_HEAD
           git -C Mu-Silicium submodule update --init --recursive --depth 1
           echo "mu at $(git -C Mu-Silicium rev-parse --short HEAD)"
-          # Binaries is the Device-Binaries submodule and holds the aston vendor set
-          # the platform package now builds against. A shallow submodule fetch that
-          # silently produces an empty tree would only surface as "file not found in
-          # workspace" deep inside the EDK2 build, so assert it here.
-          test -f Mu-Silicium/Binaries/aston/QcomPkg/Drivers/SmemDxe/SmemDxe.inf \
-            || { echo "::error::Binaries/aston is missing; the submodule did not populate"; \
-                 ls Mu-Silicium/Binaries 2>/dev/null | head; exit 1; }
-          echo "aston vendor set present: $(find Mu-Silicium/Binaries/aston -name '*.inf' | wc -l) INFs"
 
       - name: venv and nasm shim
         run: |
@@ -123,28 +110,24 @@ jobs:
           venv/bin/pip install uefi_firmware
           venv/bin/pip install capstone
 
-      # Not needed any more. The platform package now builds against the aston
-      # vendor binaries that Mu-Silicium already carries as its Binaries
-      # submodule, the same set the sibling SM8850 package boots this phone with.
-      # The extractor pulled myron's own firmware DXE drivers instead, which is
-      # a different ABI generation and is what the assertions came from. The
-      # script and its pinned inputs stay in the repository, unused, so the
-      # comparison remains reproducible.
       - name: vendor inputs
         run: |
-          echo "skipped: building against Mu-Silicium's Binaries/aston"
-          ls Mu-Silicium/Binaries | head -20
+          source venv/bin/activate
+          python fetch_vendor_inputs.py --mu-root Mu-Silicium
+          ls Mu-Silicium/Binaries/myron | wc -l
 
+      # Xiaomi 的预编译 DXE 是 DEBUG 构建，断言里烧死了 CpuDeadLoop：一个返回
+      # EFI_NOT_FOUND 的库构造函数就能把整机停死，而我们改 PcdDebugPropertyMask
+      # 也管不到他们的镜像。把断言打印机里那两处调用（inertial delay 与
+      # CpuDeadLoop）改成 nop，打印照旧、栈平衡不变，效果等同 RELEASE 构建。
       - name: neutralise vendor assert deadloops
         run: |
           source venv/bin/activate
-          # The aston set carries no assert-printer deadloops: the patcher reports
-          # "0 call(s) neutralised across 0 module(s)". This was only needed for
-          # the drivers extracted from the phone, which had Xiaomi's DEBUG assert
-          # printer compiled in. Run it non-fatally so a future change to the set
-          # is visible in the log without failing the build.
-          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/aston --require 0 || true
+          python tools/patch_vendor_asserts.py Mu-Silicium/Binaries/myron --require 200
 
+      # myronPkg 的 DSC/FDF 引用了 UniXNUPkg 和 DarwinBootPkg。
+      # UniXNU 的固件构建把 PACKAGES_PATH 设成 {tree}/package:{tree}/drivers/DarwinBoot，
+      # 这里等价地把两个包放进了 Platforms/Xiaomi（它已经在 PackagesPath 里）。
       - name: unixnu packages
         run: |
           git clone --depth 1 https://github.com/xl8757/unixnu-myron-build.git unixnu
@@ -196,11 +179,6 @@ jobs:
           grep -q 'myron_screen_sec_entry' Mu-Silicium/BootShim/ScreenLog.c
           ls Mu-Silicium/BootShim
           sha256sum Mu-Silicium/Resources/DTBs/myron.dtb
-          # The build log printed "dsc: USE_CUSTOM_DISPLAY_DRIVER = 0" while the
-          # repository had 1, so print the value that actually got copied.
-          echo "--- copied DSC display flag ---"
-          grep -n 'USE_CUSTOM_DISPLAY_DRIVER' Mu-Silicium/Platforms/Xiaomi/myronPkg/myron.dsc || true
-          grep -rn 'USE_CUSTOM_DISPLAY_DRIVER' Mu-Silicium/Resources/Configs/myron.toml || true
 
       # 实验开关：不改仓库、只改构建产物，用于定位复位点。
       - name: apply experiment knobs
@@ -221,22 +199,11 @@ jobs:
         env:
           BUILD_TYPE: ${{ inputs.build_type || 'DEBUG' }}
         run: |
-          # FDF 在第一次构建就会引用稀疏卷，此时还没有 HelloPayload.efi；
-          # 先放一个只含头部的占位，第二次构建前会被真实内容覆盖。
-          python3 tools/make_payload.py sparse --placeholder \
-            --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.sparse
           cd Mu-Silicium
           source ../venv/bin/activate
           if [ "$BUILD_TYPE" = DEBUG ]; then
             python3 ../apply_screen_log.py --mu-root .
           fi
-          # The platform package lists its vendor drivers as "Binaries/aston/...",
-          # the same shape the sibling SM8850 package uses. EDK2 resolves such a
-          # path by searching PACKAGES_PATH for a directory whose tail matches, so
-          # Binaries has to be on it; without it the build stops with
-          # "aston/QcomPkg/Drivers/SmemDxe/SmemDxe.inf is not found in packages path".
-          export PACKAGES_PATH="$PWD:$PWD/Binaries"
-          echo "PACKAGES_PATH=$PACKAGES_PATH"
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           echo "=== 产物 ==="
           # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
@@ -267,20 +234,8 @@ jobs:
             --size-kib 1024 \
             --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu.toml" \
             --add "PAYLOADS/HELLO.EFI=$efi"
-          # 48 MiB 大卷走 XNU_Payload 预留区（0xF0000000）。FAT12 每簇 32 扇区
-          # 才能把簇数压在 4084 以内；小卷仍留在 FD 里作兜底，大卷地址由
-          # repack 写进 boot.img 头。配置刻意不同（title / args=pause），日志
-          # 里的 runtime unixnu.toml 能直接证明设备用的是哪一个。
-          python3 tools/make_payload.py fat --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.img \
-            --size-kib 49152 --cluster-sectors 32 \
-            --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu-big.toml" \
-            --add "PAYLOADS/HELLO.EFI=$efi"
-          python3 tools/make_payload.py sparse \
-            --in Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.img \
-            --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.sparse
           cd Mu-Silicium
           source ../venv/bin/activate
-          export PACKAGES_PATH="$PWD:$PWD/Binaries"
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           cd ..
           # 第二次构建只增量重跑 GenFv：Build/ 下的 FD 更新了，但
@@ -294,9 +249,20 @@ jobs:
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
             --img Mu-Silicium/myron-boot.img --fd "$fd"
 
-      # boot ramdisk 已被设备日志证伪：ABL 在 fastboot boot 时只搬 kernel 段
-      # （x0=0、无 DTB），48 MiB ramdisk 从没被用过。大卷改由 FD 内的稀疏
-      # 副本在 DXE 阶段还原，所以这里不再 repack，boot.img 保持构建产物原样。
+      # 官方负载发现顺序（unixnu.com porting/uefi-firmware#payload-discovery）第一条
+      # 就是 ramdisk_bytes > 0。同一台机器的社区记录（xwsjjctz/UniXNU-NX769J 的
+      # DEVICE-EVIDENCE）也实测：boot ramdisk 走默认 0x01000000 到不了菜单，但把
+      # ramdisk_addr 挪进已描述的内存（这里 0xA6F00000，见 MemoryMapLib 的 Initrd
+      # 描述符）后 /chosen 与固定地址两条路都能接上。repack 同时改长度和地址。
+      - name: repack boot image with the payload ramdisk
+        run: |
+          python3 tools/make_payload.py repack --boot Mu-Silicium/myron-boot.img \
+            --ramdisk Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload.img \
+            --out Mu-Silicium/myron-boot.img
+          ls -l Mu-Silicium/myron-boot.img
+          fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
+          python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
+            --img Mu-Silicium/myron-boot.img --fd "$fd"
 
       - uses: actions/upload-artifact@v4
         with:
