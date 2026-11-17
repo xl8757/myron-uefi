@@ -196,6 +196,11 @@ jobs:
           grep -q 'myron_screen_sec_entry' Mu-Silicium/BootShim/ScreenLog.c
           ls Mu-Silicium/BootShim
           sha256sum Mu-Silicium/Resources/DTBs/myron.dtb
+          # The build log printed "dsc: USE_CUSTOM_DISPLAY_DRIVER = 0" while the
+          # repository had 1, so print the value that actually got copied.
+          echo "--- copied DSC display flag ---"
+          grep -n 'USE_CUSTOM_DISPLAY_DRIVER' Mu-Silicium/Platforms/Xiaomi/myronPkg/myron.dsc || true
+          grep -rn 'USE_CUSTOM_DISPLAY_DRIVER' Mu-Silicium/Resources/Configs/myron.toml || true
 
       # 实验开关：不改仓库、只改构建产物，用于定位复位点。
       - name: apply experiment knobs
