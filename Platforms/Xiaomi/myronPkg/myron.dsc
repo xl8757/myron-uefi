@@ -189,7 +189,7 @@
 [Components]
   # The tree is read from the DeviceTreeBlob FREEFORM section, so this does not
   # depend on the bootloader passing one.
-  EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
 
   #
   # ACPI Tables
