@@ -129,11 +129,18 @@ READ_LOCK_STATUS   = TRUE
 
   # Device Tree
   #
-  # 高通那批厂商 DXE 是照着设备树找区域的。Mu 默认靠扫「FD Reserved」里的原厂
-  # UEFI 机器码来取 DtbExtension 地址（见 XblProtocols.c），而内存启动时那块
-  # 内存里没有原厂固件，扫描必然落空。改由我们自己的驱动把 ABL 传进来的树
-  # 重新发布成 gEfiDtbExtensionHobGuid；这块 FREEFORM 是它的静态副本。
-  INF myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
+  # Vendor drivers resolve their regions through the tree, so something has to
+  # publish it. Mu's default path scans the FD Reserved region for the stock
+  # UEFI's HOB registration function (XblProtocols.c); under "fastboot boot"
+  # that region holds ABL leftovers, the scan finds nothing, and every vendor
+  # driver that looks the tree up fails.
+  #
+  # DtPlatformDxe is the standard answer and the one the sibling platforms use:
+  # it reads the FREEFORM section below by GUID and UI name, so the tree comes
+  # from this image instead of from the bootloader. The custom driver that used
+  # to sit here depended on the x0 ABL passes, which SEC overwrites in
+  # ModuleEntryPoint.S before anything can record it.
+  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
   FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
     SECTION RAW = myronPkg/FdtBlob/myron.dtb
     SECTION UI = "DeviceTreeBlob"
