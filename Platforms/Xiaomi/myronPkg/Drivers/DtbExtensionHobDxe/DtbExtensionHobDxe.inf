@@ -1,16 +1,11 @@
 ## @file
-#  Publish the embedded device tree as the DtbExtension HOB.
+#  Publish the device tree ABL handed over as the DtbExtension HOB.
 #
-#  The vendor DXE stack resolves its regions through gEfiDtbExtensionHobGuid.
-#  Mu builds that HOB by scanning the FD Reserved region for the stock UEFI's
-#  HOB registration function, which only works when the stock firmware is the
-#  one running. Under "fastboot boot" the region holds ABL leftovers and the
-#  scan finds nothing, so this driver supplies the HOB from the image instead.
-#  See DtbExtensionHobDxe.c.
-#
-#  It is a DXE driver rather than a PEIM because this platform maps HobLib onto
-#  the DXE instance only, and it is listed in APRIORI so it runs before
-#  EnvDxeEnhanced and the rest of the vendor stack.
+#  Mu's PlatformPeiLib derives that address by scanning the "FD Reserved" region
+#  for the stock UEFI's HOB registration function, which only exists when the
+#  stock firmware is the one running. A "fastboot boot" payload has to supply it
+#  itself; see DtbExtensionHobDxe.c. It is a DXE driver rather than a PEIM
+#  because this platform maps HobLib onto the DXE instance only.
 #
 #  Copyright (c) 2026, myron port.
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -26,30 +21,22 @@
 
 [Sources]
   DtbExtensionHobDxe.c
-  ScreenFont.h
 
 [Packages]
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
-  EmbeddedPkg/EmbeddedPkg.dec
   QcomPkg/QcomPkg.dec
 
 [LibraryClasses]
-  BaseLib
   DebugLib
-  DxeServicesLib
   HobLib
-  UefiBootServicesTableLib
   UefiDriverEntryPoint
 
 [Guids]
   gEfiDtbExtensionHobGuid
 
 #
-# TRUE on purpose. This driver is in APRIORI ahead of the vendor stack, and the
-# volume protocol DxeServicesLib needs is published by DxeCore itself while the
-# APRIORI list runs, so waiting on it here would deadlock the ordering that
-# makes the driver useful.
+# Nothing to wait for: the entry argument HOB comes from SEC, and the APRIORI
+# list already places this driver ahead of the vendor stack.
 #
 [Depex]
   TRUE
