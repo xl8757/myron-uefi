@@ -18,20 +18,20 @@
   that same address under the GUID the vendor drivers look for. It runs as the
   first DXE driver, ahead of EnvDxeEnhanced and the rest of the vendor stack.
 
-  DIAGNOSTIC BUILD. The console only shows the last couple of dozen lines, so a
-  line printed here scrolls away long before a driver further down the stack
-  asserts and leaves its message on screen. To make this driver's outcome
-  visible, it now halts on failure instead of returning success quietly. The
-  screen then ends on this driver's report, which distinguishes the two cases
-  worth telling apart:
+  DIAGNOSTIC BUILD. Two things make the plain DEBUG version useless here.
 
-    - halted here: the device tree could not be republished, and the printed
-      reason says which check failed. The vendor stack never gets to run, so
-      any later assertion is a consequence, not a second bug.
-    - reached SmemDxe and asserted there: the tree was republished, so SmemDxe
-      fails for its own reason.
+  First, the console only shows the last few dozen lines, so anything printed
+  this early scrolls away before a driver further down the stack asserts.
+  Second, DEBUG output from this module did not reach the screen at all on
+  hardware even though the same channel printed the DXE core's own lines, so
+  the report cannot rely on DEBUG.
 
-  Set DT BHOB to release mode (-D DT BHOB_HALT=0) once bring-up is past this.
+  This version therefore writes straight to ConOut with OutputString, which is
+  what the dispatcher's own load banner uses, and halts on failure so the
+  report is the last thing on screen. A successful run returns normally and the
+  stack continues.
+
+  Set DTBHOB_VERBOSE to 0 to keep only the failure report.
 
 **/
 
@@ -42,11 +42,19 @@
 #include <Library/UefiLib.h>
 
 //
-// Halt instead of returning on a failed publish. 1 keeps the diagnostic on
-// screen; 0 restores the quiet behaviour documented above.
+// Halt instead of returning when the tree cannot be republished, so the report
+// stays visible. 0 restores the original quiet behaviour.
 //
 #ifndef DTBHOB_HALT_ON_FAILURE
 #define DTBHOB_HALT_ON_FAILURE  1
+#endif
+
+//
+// Print the successful path too. The entry banner and the tree header are what
+// say whether SEC recorded x0 and whether it looks like a real FDT.
+//
+#ifndef DTBHOB_VERBOSE
+#define DTBHOB_VERBOSE  1
 #endif
 
 //
@@ -57,12 +65,74 @@ STATIC CONST EFI_GUID  mEntryArgHobGuid = {
 };
 
 /**
+  Print an ASCII string straight to ConOut.
+
+  DEBUG output from this module never reached the console on hardware, so the
+  report uses the same interface the DXE core's load banner uses.
+
+  @param[in] Text  NUL-terminated ASCII text.
+**/
+STATIC
+VOID
+Say (
+  IN CONST CHAR8  *Text
+  )
+{
+  CHAR16  Buffer[160];
+  UINTN   Index;
+
+  if ((gST == NULL) || (gST->ConOut == NULL)) {
+    return;
+  }
+
+  for (Index = 0; (Index < ARRAY_SIZE (Buffer) - 1) && (Text[Index] != '\0'); Index++) {
+    Buffer[Index] = (CHAR16)Text[Index];
+  }
+
+  Buffer[Index] = L'\0';
+  gST->ConOut->OutputString (gST->ConOut, Buffer);
+}
+
+/**
+  Print a label and a 64-bit value in hex as one line.
+
+  @param[in] Label  ASCII prefix.
+  @param[in] Value  Value to append in hex.
+**/
+STATIC
+VOID
+SayHex (
+  IN CONST CHAR8       *Label,
+  IN EFI_PHYSICAL_ADDRESS  Value
+  )
+{
+  CHAR8  Buffer[160];
+  UINTN  Position;
+  UINTN  Nibble;
+
+  for (Position = 0; (Position < ARRAY_SIZE (Buffer) - 20) && (Label[Position] != '\0'); Position++) {
+    Buffer[Position] = Label[Position];
+  }
+
+  Buffer[Position++] = '0';
+  Buffer[Position++] = 'x';
+  for (Nibble = 16; Nibble > 0; Nibble--) {
+    UINTN  Digit = (UINTN)((Value >> ((Nibble - 1) * 4)) & 0xF);
+    Buffer[Position++] = (CHAR8)(Digit < 10 ? '0' + Digit : 'a' + Digit - 10);
+  }
+
+  Buffer[Position++] = '\n';
+  Buffer[Position]   = '\0';
+  Say (Buffer);
+}
+
+/**
   Read a 32-bit big-endian word out of the device tree header.
 
   @param[in] Base  Candidate device tree.
   @param[in] Off   Byte offset inside the header.
 
-  @retval  The word at Off, or MAX_UINT32 when Base is not a device tree.
+  @retval  The word at Off.
 **/
 STATIC
 UINT32
@@ -100,8 +170,8 @@ IsDeviceTree (
     return FALSE;
   }
 
-  UINT32 Total  = FdtWord (Base, 4);
-  UINT32 Struct = FdtWord (Base, 8);
+  UINT32 Total   = FdtWord (Base, 4);
+  UINT32 Struct  = FdtWord (Base, 8);
   UINT32 Strings = FdtWord (Base, 12);
 
   if ((Total < 0x40) || (Struct < 0x28) || (Struct >= Total) ||
@@ -113,8 +183,7 @@ IsDeviceTree (
 }
 
 /**
-  Report a failed publish and, in the diagnostic build, stop so the message
-  stays on the console.
+  Report a failed publish and, when enabled, stop so it stays on screen.
 
   @param[in] Reason  Why the tree could not be published.
 
@@ -126,11 +195,12 @@ Fail (
   IN CONST CHAR8  *Reason
   )
 {
-  DEBUG ((DEBUG_ERROR, "DTBHOB: FAIL %a\n", Reason));
-  DEBUG ((DEBUG_ERROR, "DTBHOB: the vendor stack will not resolve the tree\n"));
+  Say ("DTBHOB: FAIL ");
+  Say (Reason);
+  Say ("\nDTBHOB: the vendor stack will not resolve the tree\n");
 
 #if DTBHOB_HALT_ON_FAILURE
-  DEBUG ((DEBUG_ERROR, "DTBHOB: halting here to keep this message on screen\n"));
+  Say ("DTBHOB: halted; this is the last output by design\n");
   CpuDeadLoop ();
 #endif
 
@@ -156,14 +226,16 @@ DtbExtensionHobEntry (
   EFI_PHYSICAL_ADDRESS  Dtb;
   EFI_PHYSICAL_ADDRESS  Existing;
 
-  DEBUG ((DEBUG_ERROR, "DTBHOB: entry, looking for the SEC entry argument\n"));
+#if DTBHOB_VERBOSE
+  Say ("DTBHOB: entry\n");
+#endif
 
   if (GetFirstGuidHob (&gEfiDtbExtensionHobGuid) != NULL) {
     //
     // Already published means something upstream did the work. That is a good
     // outcome, not a failure, so do not halt on it.
     //
-    DEBUG ((DEBUG_ERROR, "DTBHOB: DtbExtension already published, keeping it\n"));
+    Say ("DTBHOB: DtbExtension already published, keeping it\n");
     return EFI_SUCCESS;
   }
 
@@ -172,30 +244,29 @@ DtbExtensionHobEntry (
     return Fail ("no entry argument HOB; SEC did not record x0");
   }
 
-  DEBUG ((DEBUG_ERROR, "DTBHOB: entry argument HOB size %u\n",
-          (UINT32)GET_GUID_HOB_DATA_SIZE (Hob)));
+#if DTBHOB_VERBOSE
+  SayHex ("DTBHOB: entry argument HOB size ", (EFI_PHYSICAL_ADDRESS)GET_GUID_HOB_DATA_SIZE (Hob));
+#endif
 
   if (GET_GUID_HOB_DATA_SIZE (Hob) < sizeof (UINT64)) {
     return Fail ("entry argument HOB smaller than a pointer");
   }
 
   Dtb = *(CONST UINT64 *)GET_GUID_HOB_DATA (Hob);
-  DEBUG ((DEBUG_ERROR, "DTBHOB: x0 = 0x%lx\n", Dtb));
+  SayHex ("DTBHOB: x0 ", Dtb);
 
   if (!IsDeviceTree (Dtb)) {
-    DEBUG ((DEBUG_ERROR, "DTBHOB: magic at x0 is 0x%x, expected 0xd00dfeed\n",
-            FdtWord ((CONST UINT8 *)(UINTN)Dtb, 0)));
+    SayHex ("DTBHOB: magic ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)(UINTN)Dtb, 0));
     return Fail ("x0 does not point at a flattened device tree");
   }
 
-  DEBUG ((DEBUG_ERROR, "DTBHOB: tree size 0x%x, off_struct 0x%x, off_strings 0x%x\n",
-          FdtWord ((CONST UINT8 *)(UINTN)Dtb, 4),
-          FdtWord ((CONST UINT8 *)(UINTN)Dtb, 8),
-          FdtWord ((CONST UINT8 *)(UINTN)Dtb, 12)));
+  SayHex ("DTBHOB: tree size ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)(UINTN)Dtb, 4));
+  SayHex ("DTBHOB: off_struct ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)(UINTN)Dtb, 8));
+  SayHex ("DTBHOB: off_strings ", (EFI_PHYSICAL_ADDRESS)FdtWord ((CONST UINT8 *)(UINTN)Dtb, 12));
 
   Existing = Dtb;
   BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &Existing, sizeof (Existing));
-  DEBUG ((DEBUG_ERROR, "DTBHOB: OK published device tree at 0x%lx\n", Dtb));
+  SayHex ("DTBHOB: OK published device tree at ", Dtb);
 
   return EFI_SUCCESS;
 }
