@@ -72,6 +72,8 @@ STATIC CONST EFI_GUID  mEntryArgHobGuid = {
 
   @param[in] Text  NUL-terminated ASCII text.
 **/
+STATIC EFI_SYSTEM_TABLE  *mSystemTable;
+
 STATIC
 VOID
 Say (
@@ -81,7 +83,7 @@ Say (
   CHAR16  Buffer[160];
   UINTN   Index;
 
-  if ((gST == NULL) || (gST->ConOut == NULL)) {
+  if ((mSystemTable == NULL) || (mSystemTable->ConOut == NULL)) {
     return;
   }
 
@@ -90,7 +92,7 @@ Say (
   }
 
   Buffer[Index] = L'\0';
-  gST->ConOut->OutputString (gST->ConOut, Buffer);
+  mSystemTable->ConOut->OutputString (mSystemTable->ConOut, Buffer);
 }
 
 /**
@@ -225,6 +227,8 @@ DtbExtensionHobEntry (
   EFI_HOB_GUID_TYPE     *Hob;
   EFI_PHYSICAL_ADDRESS  Dtb;
   EFI_PHYSICAL_ADDRESS  Existing;
+
+  mSystemTable = SystemTable;
 
 #if DTBHOB_VERBOSE
   Say ("DTBHOB: entry\n");
