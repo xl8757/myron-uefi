@@ -41,14 +41,75 @@
 #include <Library/HobLib.h>
 #include <Library/UefiLib.h>
 
+#include "ScreenFont.h"
+
 //
-// BootShim/ScreenLog.c writes the 0xfc800000 framebuffer with general registers
-// only, and PlatformSecLib re-includes it, so the symbol is in this firmware.
-// It is the one channel proven to reach the panel on this board: the board has
-// no UART, and neither DEBUG nor ConOut from this module appeared on hardware
-// while the DXE core's own ConOut lines did.
+// Draw on the panel framebuffer directly.
 //
-extern void myron_screen_line (const char *Text, unsigned Row);
+// BootShim/ScreenLog.c proves this works here - its SEC stage lines are visible
+// on hardware - but its symbol lives in the shim image and a DXE driver cannot
+// link against it (lld reports "undefined symbol: myron_screen_line"). The board
+// has no UART, and neither DEBUG nor ConOut from this module reached the panel
+// while the DXE core's own ConOut lines did, so drawing the same way the shim
+// does is the only report channel available.
+//
+#define DTBHOB_FB_BASE  0xfc800000ULL
+#define DTBHOB_FB_WIDTH 1200U
+#define DTBHOB_FB_HEIGHT 2608U
+#define DTBHOB_FB_STRIDE 1200U
+#define DTBHOB_FB_SCALE 2U
+#define DTBHOB_FB_MARGIN 24U
+#define DTBHOB_FB_BG   0xff102040U
+#define DTBHOB_FB_FG   0xffffffffU
+
+STATIC
+VOID
+ScreenLine (
+  IN CONST CHAR8  *Text,
+  IN UINTN        Row
+  )
+{
+  volatile UINT32  *Fb   = (volatile UINT32 *)(UINTN)DTBHOB_FB_BASE;
+  UINTN             X    = DTBHOB_FB_MARGIN;
+  UINTN             Y    = DTBHOB_FB_MARGIN + Row * 16U * DTBHOB_FB_SCALE;
+  UINTN             Gy;
+  UINTN             Gx;
+
+  if (Y + 16U * DTBHOB_FB_SCALE > DTBHOB_FB_HEIGHT) {
+    return;
+  }
+
+  for (Gy = 0; Gy < 16U * DTBHOB_FB_SCALE; Gy++) {
+    for (Gx = DTBHOB_FB_MARGIN; Gx < DTBHOB_FB_WIDTH - DTBHOB_FB_MARGIN; Gx++) {
+      Fb[(Y + Gy) * DTBHOB_FB_STRIDE + Gx] = DTBHOB_FB_BG;
+    }
+  }
+
+  while ((*Text != '\0') && (X + 8U * DTBHOB_FB_SCALE <= DTBHOB_FB_WIDTH - DTBHOB_FB_MARGIN)) {
+    UINTN          Ch = (UINTN)(UINT8)*Text++;
+    CONST UINT8   *Glyph;
+
+    if ((Ch < 0x20) || (Ch > 0x7e)) {
+      Ch = '?';
+    }
+
+    Glyph = font8x16[Ch - 0x20];
+    for (Gy = 0; Gy < 16; Gy++) {
+      volatile UINT32  *Line = Fb + (Y + Gy * DTBHOB_FB_SCALE) * DTBHOB_FB_STRIDE + X;
+      for (Gx = 0; Gx < 8; Gx++) {
+        UINT32  Color = (Glyph[Gy] & (0x80U >> Gx)) ? DTBHOB_FB_FG : DTBHOB_FB_BG;
+        Line[Gx * DTBHOB_FB_SCALE]                    = Color;
+        Line[Gx * DTBHOB_FB_SCALE + 1]                = Color;
+        Line[DTBHOB_FB_STRIDE + Gx * DTBHOB_FB_SCALE]     = Color;
+        Line[DTBHOB_FB_STRIDE + Gx * DTBHOB_FB_SCALE + 1] = Color;
+      }
+    }
+
+    X += 8U * DTBHOB_FB_SCALE;
+  }
+
+  __asm__ volatile ("dsb sy" ::: "memory");
+}
 
 //
 // Halt instead of returning when the tree cannot be republished, so the report
@@ -97,14 +158,14 @@ Say (
 
   //
   // One framebuffer row per call, so the report is a list of lines rather than
-  // one overwritten row. myron_screen_line takes a single row number.
+  // one overwritten row. ScreenLine takes a single row number.
   //
   for (Index = 0; (Index < sizeof (Line) - 1) && (Text[Index] != '\0') && (Text[Index] != '\n'); Index++) {
     Line[Index] = Text[Index];
   }
 
   Line[Index] = '\0';
-  myron_screen_line (Line, (unsigned)mRow);
+  ScreenLine (Line, mRow);
   mRow++;
 
   //
