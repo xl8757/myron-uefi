@@ -103,6 +103,14 @@ jobs:
           git -C Mu-Silicium checkout -q FETCH_HEAD
           git -C Mu-Silicium submodule update --init --recursive --depth 1
           echo "mu at $(git -C Mu-Silicium rev-parse --short HEAD)"
+          # Binaries is the Device-Binaries submodule and holds the aston vendor set
+          # the platform package now builds against. A shallow submodule fetch that
+          # silently produces an empty tree would only surface as "file not found in
+          # workspace" deep inside the EDK2 build, so assert it here.
+          test -f Mu-Silicium/Binaries/aston/QcomPkg/Drivers/SmemDxe/SmemDxe.inf \
+            || { echo "::error::Binaries/aston is missing; the submodule did not populate"; \
+                 ls Mu-Silicium/Binaries 2>/dev/null | head; exit 1; }
+          echo "aston vendor set present: $(find Mu-Silicium/Binaries/aston -name '*.inf' | wc -l) INFs"
 
       - name: venv and nasm shim
         run: |
