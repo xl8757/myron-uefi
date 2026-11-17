@@ -23,10 +23,16 @@
   BUILD_TARGETS                  = RELEASE|DEBUG
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = myronPkg/myron.fdf
-  # The panel is not re-initialised: ABL leaves a live framebuffer at 0xfc800000.
-  # SimpleFbDxe consumes it; a vendor display driver would own MDSS and clash
-  # with the running scan-out client.
-  USE_CUSTOM_DISPLAY_DRIVER      = 0
+  # 1 = the vendor DisplayDxe drives the panel; 0 = SimpleFbDxe uses whatever
+  # framebuffer ABL left behind.
+  #
+  # This was 0, on the theory that a vendor display driver would own MDSS and
+  # clash with the running scan-out client. The sibling package for this same
+  # phone sets 1 and boots to its boot manager, so it is 1 here now: with 0 the
+  # DXE stack stops on a synchronous external abort at 0x17422030 while EnvDxe
+  # is running, and matching the working configuration is the cheaper thing to
+  # test than reasoning about MDSS ownership.
+  USE_CUSTOM_DISPLAY_DRIVER      = 1
 
   #
   # 0 = SM8550-AB
@@ -78,8 +84,8 @@
   #
   # Simple Frame Buffer
   #
-  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1200
-  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2608
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1264
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2780
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|32
 
   #
