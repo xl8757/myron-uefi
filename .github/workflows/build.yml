@@ -29,6 +29,14 @@ on:
         type: choice
         options: [DEBUG, RELEASE]
         default: DEBUG
+      kernel:
+        description: "kernel.macho for the payload; empty keeps the hello-only control volume"
+        type: string
+        default: ""
+      kernel_size_mib:
+        description: "payload FAT size when a kernel is supplied, in MiB"
+        type: string
+        default: "96"
   push:
     paths:
       - 'Platforms/**'
@@ -243,37 +251,75 @@ jobs:
       # 装载器把内存盘放哪儿不由我们决定（实测 /chosen 指到未映射的地址），
       # 所以把卷放进固件卷：驱动用 GetSectionFromAnyFv 取，完全可控。
       # HelloPayload 由上面那次构建产出，因此这里补第二遍（增量，只重跑 GenFv）。
-      - name: payload volume with the hello entry
+      # Build the payload FAT volume, then rebuild the firmware so the volume is
+      # inside it, then repack boot.img around the new FD.
+      #
+      # The volume has two shapes, chosen by whether a kernel was supplied:
+      #
+      #   no kernel: unixnu.toml and HELLO.EFI only. This is the configuration
+      #   known to reach the menu and return Success on this phone, so it stays
+      #   the default and is the control for every kernel attempt.
+      #
+      #   with kernel: the same volume plus KERNEL.MACHO and a unixnu.toml whose
+      #   default entry is type="xnu". UniXNU hands that entry to the
+      #   UniXNULoader protocol, which DarwinBoot installs. DarwinBoot parses
+      #   arm64 and arm64e MH_EXECUTE images; the prelinked fileset is not one,
+      #   so this needs the un-prelinked kernel.
+      #
+      # The volume size follows the kernel rather than being fixed at 1024 KiB,
+      # because the kernel is tens of MiB and a FAT volume that is too small
+      # would truncate it silently.
+      - name: payload volume
         env:
           BUILD_TYPE: ${{ inputs.build_type || 'DEBUG' }}
+          KERNEL: ${{ inputs.kernel }}
+          KERNEL_MIB: ${{ inputs.kernel_size_mib || '96' }}
         run: |
           efi=$(find Mu-Silicium/Build -name HelloPayload.efi -print -quit)
-          test -n "$efi" || { echo "没找到 HelloPayload.efi"; exit 1; }
+          test -n "$efi" || { echo "HelloPayload.efi not found" >&2; exit 1; }
           ls -l "$efi"
-          python3 tools/make_payload.py fat --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload.img \
-            --size-kib 1024 \
-            --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu.toml" \
-            --add "PAYLOADS/HELLO.EFI=$efi"
+
+          payload=Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload.img
+          rm -f "$payload"
+
+          if [ -z "$KERNEL" ]; then
+            echo "payload: hello only, no kernel supplied"
+            python3 tools/make_payload.py fat --out "$payload" \
+              --size-kib 1024 \
+              --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu.toml" \
+              --add "PAYLOADS/HELLO.EFI=$efi"
+          else
+            test -f "$KERNEL" || { echo "kernel not found: $KERNEL" >&2; exit 1; }
+            kernel_bytes=$(stat -c %s "$KERNEL")
+            echo "payload: kernel $KERNEL ($kernel_bytes bytes) plus hello"
+            python3 tools/make_payload.py fat --out "$payload" \
+              --size-kib "$((KERNEL_MIB * 1024))" \
+              --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu-kernel.toml" \
+              --add "PAYLOADS/HELLO.EFI=$efi" \
+              --add "PAYLOADS/KERNEL.MACHO=$KERNEL"
+            out_bytes=$(stat -c %s "$payload")
+            echo "payload volume $out_bytes bytes, kernel $kernel_bytes bytes"
+            test "$out_bytes" -ge "$kernel_bytes" || {
+              echo "::error::payload volume is smaller than the kernel"; exit 1; }
+          fi
+          ls -l "$payload"
+
+          # The FD embeds the payload as a FREEFORM section, so the firmware has
+          # to be rebuilt now that the volume exists. This second build only
+          # redoes GenFv over the already-built objects.
           cd Mu-Silicium
           source ../venv/bin/activate
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           cd ..
-          # 第二次构建只增量重跑 GenFv：Build/ 下的 FD 更新了，但
-          # myron-boot.img 仍是第一次构建时内嵌的旧 FD。实测后果是设备读到
-          # 旧 unixnu.toml（timeout=30、相对路径），payload 卷的改动永远到
-          # 不了机器。把新 FD 换进 gzip(BootShim + FD) 并强制比对。
+
+          # myron-boot.img still carries the FD from the first build, so swap in
+          # the new one and verify the gzip(BootShim + FD) body matches.
           fd=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           python3 tools/make_payload.py refd --boot Mu-Silicium/myron-boot.img \
             --fd "$fd" --out Mu-Silicium/myron-boot.img
           ls -l Mu-Silicium/myron-boot.img
           python3 tools/check_artifacts.py --shim Mu-Silicium/BootShim/BootShim.bin \
             --img Mu-Silicium/myron-boot.img --fd "$fd"
-
-      # 官方负载发现顺序（unixnu.com porting/uefi-firmware#payload-discovery）第一条
-      # 就是 ramdisk_bytes > 0。同一台机器的社区记录（xwsjjctz/UniXNU-NX769J 的
-      # DEVICE-EVIDENCE）也实测：boot ramdisk 走默认 0x01000000 到不了菜单，但把
-      # ramdisk_addr 挪进已描述的内存（这里 0xA6F00000，见 MemoryMapLib 的 Initrd
-      # 描述符）后 /chosen 与固定地址两条路都能接上。repack 同时改长度和地址。
       - name: repack boot image with the payload ramdisk
         run: |
           python3 tools/make_payload.py repack --boot Mu-Silicium/myron-boot.img \
