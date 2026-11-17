@@ -27,6 +27,7 @@
   QcomPkg/QcomPkg.dec
 
 [LibraryClasses]
+  BaseLib
   DebugLib
   HobLib
   UefiDriverEntryPoint
