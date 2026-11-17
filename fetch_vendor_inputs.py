@@ -115,8 +115,16 @@ def main():
     args = parser.parse_args()
     expected = __import__('json').loads((ROOT / 'Resources/vendor-inputs.json').read_text())
     output = args.mu_root / 'Binaries/myron'
+    # A local --image wins, then the image committed beside this script, then the
+    # download. The committed copy exists because the 4.0.6.0 package the device
+    # runs is a local download and CI cannot fetch it; committing the 2.7 MiB
+    # uefi.img keeps the build reproducible without redistributing the 8.2 GiB zip.
+    pinned = ROOT / 'Resources/inputs/uefi-4.0.6.0.img'
     if args.image:
         extract(args.image.read_bytes(), output, expected)
+        return
+    if pinned.is_file():
+        extract(pinned.read_bytes(), output, expected)
         return
     with tempfile.TemporaryDirectory(prefix='myron-firmware-') as name:
         archive = Path(name) / 'firmware.zip'
