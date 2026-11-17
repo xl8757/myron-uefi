@@ -1,0 +1,18 @@
+{
+  "reason": "HyperOS 3.0.13.0 panel descriptors that the 4.0.6.0 package renamed. Mu-Silicium Extra.fdf.inc lists RawFiles/Panel_* unconditionally, so the build fails with 'File/directory not found in workspace' on these three unless they exist.",
+  "source_package": "OS3.0.13.0.WPMCNXM (uefi.img sha256 e5b65a67fe6777d6fe6868cad23d842fd8486cbc5cef3a497b17bc9256ffc702)",
+  "files": {
+    "Panel_P3_36_02_0b_ltpo_dsc_cmd.xml": {
+      "size": 3767,
+      "sha256": "8ba5a667c4fc91f3807b5283b09420221c0dc407f9863c0313beff41c56903e5"
+    },
+    "Panel_P3_42_02_0a_ltpo_dsc_vhm.xml": {
+      "size": 7531,
+      "sha256": "088cfa4d05c3059457abd120e5a8d8b283c3e847ab7e90cd44d5f0b5fa137ddc"
+    },
+    "Panel_P3_42_02_0a_ltpo_dsc_vhm_pmic_b.xml": {
+      "size": 10319,
+      "sha256": "00bd0c7bce7a073c3e70141f3e14d4631f372e6bc7654a390545f3f3de77a69d"
+    }
+  }
+}
