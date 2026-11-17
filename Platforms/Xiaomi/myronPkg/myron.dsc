@@ -84,14 +84,21 @@
   #
   # Simple Frame Buffer
   #
-  # This phone's measured panel: 1200x2608 with a 4800-byte stride, from
-  # SurfaceFlinger on the running Android build; FINDINGS.md records the firmware
-  # GOP as 1220x2656 for the same panel. songyuanPkg uses 1264x2780 because it was
-  # built for a different panel variant: with those values here DisplayDxe does
-  # initialise (the CPU abort at 0x17422030 is gone) but the console renders as
-  # horizontal streaks, which is a stride/size mismatch rather than a dead panel.
-  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1200
-  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2608
+  # 1264x2780, as the sibling package for this phone sets them.
+  #
+  # The panel itself is 1200x2608 (SurfaceFlinger) with a 4800-byte stride, and
+  # FINDINGS.md records the firmware GOP as 1220x2656, so these numbers are not
+  # the panel's. They are what the vendor DisplayDxe needs the PCDs to say: with
+  # 1200x2608 it takes a synchronous external abort at 0x17422030 inside EnvDxe
+  # before the panel is up, and with 1264x2780 it initialises and draws.
+  #
+  # The consequence is a mis-scaled console: the text renders as horizontal
+  # streaks covering the whole panel, which is the geometry mismatch showing up
+  # as presentation rather than as a fault. Fixing that means teaching
+  # DisplayDxe this panel's real mode - a separate job from getting the stack to
+  # run, and the stack running is what this value buys.
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|1264
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|2780
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|32
 
   #
