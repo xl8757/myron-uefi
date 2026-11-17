@@ -102,6 +102,22 @@ def extract(data, output, expected):
             walk(child)
 
     walk(fv)
+    # Panel descriptors the 4.0.6.0 package renamed, recovered from 3.0.13.0 and
+    # kept under Resources/inputs/raw-compat. Mu-Silicium's Extra.fdf.inc names
+    # RawFiles/Panel_* unconditionally, so the build stops on any that are absent
+    # even though USE_CUSTOM_DISPLAY_DRIVER is 0 and DisplayDxe is not linked.
+    compat = ROOT / 'Resources/inputs/raw-compat'
+    if compat.is_dir():
+        raw_dir = output / 'RawFiles'
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        for item in sorted(compat.iterdir()):
+            if item.suffix == '.json' or not item.is_file():
+                continue
+            if item.name in found or (raw_dir / item.name).exists():
+                continue
+            (raw_dir / item.name).write_bytes(item.read_bytes())
+            found[item.name] = True
+            print(f'compat panel: {item.name}')
     missing = set(expected) - set(found)
     if missing:
         raise ValueError('missing vendor inputs: ' + ', '.join(sorted(missing)))
