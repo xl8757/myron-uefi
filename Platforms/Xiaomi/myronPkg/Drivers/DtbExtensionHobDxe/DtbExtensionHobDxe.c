@@ -67,7 +67,13 @@ STATIC CONST EFI_GUID  mDeviceTreeBlobGuid = {
 #define DTBHOB_FB_BG     0xff102040U
 #define DTBHOB_FB_FG     0xffffffffU
 
-STATIC UINTN  mRow = 20;
+//
+// Start at the top of the screen. The SEC stage wrote its own log at rows 0..17
+// and the DXE console draws from row 0 as well, so a report parked further down
+// gets overwritten by the ASSERT text the dispatcher prints afterwards. Writing
+// over rows 0..12 keeps this report as the last thing visible.
+//
+STATIC UINTN  mRow = 0;
 
 STATIC
 VOID
@@ -260,7 +266,7 @@ DtbExtensionHobEntry (
   // Leave the report on screen long enough to read it. The vendor stack follows
   // immediately and its own output would scroll this away.
   //
-  gBS->Stall (3000000);
+  gBS->Stall (5000000);
 
   return EFI_SUCCESS;
 }
