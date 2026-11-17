@@ -187,9 +187,11 @@
   gUniXNUPkgTokenSpaceGuid.PcdUniXNUConfigPath|L"\\EFI\\UniXNU\\unixnu.tom"
 
 [Components]
-  # The tree is read from the DeviceTreeBlob FREEFORM section, so this does not
-  # depend on the bootloader passing one.
-  myronPkg/Drivers/DtbExtensionHobDxe/DtbExtensionHobDxe.inf
+  #
+  # Device tree. Mu derives the DtbExtension address by scanning the stock UEFI
+  # image in "FD Reserved", which does not exist when the payload comes from
+  # "fastboot boot". This PEIM republishes the tree ABL passed in x0 instead.
+  #
 
   #
   # ACPI Tables
