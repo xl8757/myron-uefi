@@ -23,16 +23,12 @@
 #include <Uefi.h>
 #include <Protocol/AdvancedLogger.h>
 #include <Protocol/GraphicsOutput.h>
-#include <Protocol/BlockIo.h>
-#include <Protocol/DevicePath.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/UniXNUMenuPlugin.h>
 #include <Library/AdvancedLoggerAccessLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
-#include <Library/DevicePathLib.h>
-#include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #define AUTOLOG_TICK_2S       20000000ULL
@@ -47,8 +43,8 @@
 // gets to boot its default entry and the log has no LoadImage result.
 //
 // Instead, wait until the official Advanced Logger actually contains a line
-// from UniXNUBootEntry/Main.c ("... returned ..."), which proves the boot
-// attempt is over. AUTOLOG_MIN_TICKS keeps the requested ~50 s
+// from UniXNUBootEntry ("boot: ...") or Main.c ("returned ..."), which proves
+// the boot attempt is over. AUTOLOG_MIN_TICKS keeps the requested ~50 s
 // (driver dispatched at ~25.5 s, 12 x 2 s = ~49.5 s); AUTOLOG_MAX_TICKS is
 // a hard ceiling so the QR export is never skipped entirely.
 //
@@ -87,10 +83,8 @@ BootAttemptLogged (
       break;
     }
 
-    // "boot: starting" is emitted before StartImage, so matching "boot: "
-    // would take the panel while HelloPayload is still on screen. Wait for a
-    // "returned" line: only then is the attempt really over.
-    if (AsciiStrStr (Line.Message, "returned ") != NULL)
+    if ((AsciiStrStr (Line.Message, "boot: ") != NULL) ||
+        (AsciiStrStr (Line.Message, "returned ") != NULL))
     {
       Found = TRUE;
       break;
@@ -193,9 +187,6 @@ ReportVolumes (
   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *Fs;
   EFI_FILE_PROTOCOL                *Root;
   EFI_FILE_PROTOCOL                *File;
-  EFI_BLOCK_IO_PROTOCOL            *BlockIo;
-  EFI_DEVICE_PATH_PROTOCOL         *DevicePath;
-  CHAR16                           *PathText;
 
   Handles = NULL;
   Count   = 0;
@@ -219,30 +210,6 @@ ReportVolumes (
                     );
     if (EFI_ERROR (Status) || (Fs == NULL)) {
       continue;
-    }
-
-    //
-    // Identify the volume: size and device path tell a real UFS partition
-    // (efisp) apart from the in-RAM FAT image. This is read-only probing.
-    //
-    Status = gBS->HandleProtocol (Handles[Index], &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
-    if (!EFI_ERROR (Status) && (BlockIo != NULL) && (BlockIo->Media != NULL)) {
-      DEBUG ((DEBUG_ERROR,
-              "AUTOLOG: volume %u BlockIo %u B x %lu = %lu bytes, %a\n",
-              (UINT32)Index,
-              BlockIo->Media->BlockSize,
-              (UINT64)(BlockIo->Media->LastBlock + 1),
-              (UINT64)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize,
-              BlockIo->Media->ReadOnly ? "RO" : "RW"));
-    }
-
-    Status = gBS->HandleProtocol (Handles[Index], &gEfiDevicePathProtocolGuid, (VOID **)&DevicePath);
-    if (!EFI_ERROR (Status) && (DevicePath != NULL)) {
-      PathText = ConvertDevicePathToText (DevicePath, FALSE, FALSE);
-      if (PathText != NULL) {
-        DEBUG ((DEBUG_ERROR, "AUTOLOG: volume %u path %s\n", (UINT32)Index, PathText));
-        FreePool (PathText);
-      }
     }
 
     Status = Fs->OpenVolume (Fs, &Root);
