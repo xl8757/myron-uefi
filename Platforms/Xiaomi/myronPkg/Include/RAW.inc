@@ -552,16 +552,3 @@
     SECTION UI = "uefiplat.cfg"
     SECTION RAW = Binaries/myron/RawFiles/uefiplat.cfg
   }
-
-  # The device tree the vendor stack resolves its regions through.
-  #
-  # SEC overwrites the x0 ABL hands over (ModuleEntryPoint.S does
-  # "EL1_OR_EL2 (x0)" before anything records it), so the tree has to come from
-  # the firmware image instead of from the bootloader. myronPkg/FdtBlob/myron.dtb
-  # is the stock tree captured off the device; DtbExtensionHobDxe reads this
-  # section and republishes the address under gEfiDtbExtensionHobGuid.
-  FILE FREEFORM = A7C41B93-6D2E-4F58-9B01-3C8E5F7A2D64 {
-    SECTION UI = "myron.dtb"
-    SECTION RAW = myronPkg/FdtBlob/myron.dtb
-  }
-
