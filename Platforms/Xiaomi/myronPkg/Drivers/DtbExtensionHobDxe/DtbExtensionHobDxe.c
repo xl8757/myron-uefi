@@ -139,11 +139,11 @@ STATIC CONST EFI_GUID  mEntryArgHobGuid = {
 
 //
 // The FREEFORM file myronPkg/Include/RAW.inc embeds: SECTION UI "myron.dtb",
-// SECTION RAW myronPkg/FdtBlob/myron.dtb. Same GUID as the INF so the two stay
-// together.
+// SECTION RAW myronPkg/FdtBlob/myron.dtb. Its own GUID: a FILE GUID that
+// collides with this driver's makes GenFv refuse the volume.
 //
 STATIC CONST EFI_GUID  mFdtBlobGuid = {
-  0x6B1F4C52, 0x8E57, 0x4C1D, { 0x9E, 0x3A, 0x2F, 0x0B, 0x7A, 0x5D, 0x94, 0xC1 }
+  0xA7C41B93, 0x6D2E, 0x4F58, { 0x9B, 0x01, 0x3C, 0x8E, 0x5F, 0x7A, 0x2D, 0x64 }
 };
 
 /**
