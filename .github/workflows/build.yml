@@ -225,6 +225,13 @@ jobs:
           if [ "$BUILD_TYPE" = DEBUG ]; then
             python3 ../apply_screen_log.py --mu-root .
           fi
+          # The platform package lists its vendor drivers as "Binaries/aston/...",
+          # the same shape the sibling SM8850 package uses. EDK2 resolves such a
+          # path by searching PACKAGES_PATH for a directory whose tail matches, so
+          # Binaries has to be on it; without it the build stops with
+          # "aston/QcomPkg/Drivers/SmemDxe/SmemDxe.inf is not found in packages path".
+          export PACKAGES_PATH="$PWD:$PWD/Binaries"
+          echo "PACKAGES_PATH=$PACKAGES_PATH"
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           echo "=== 产物 ==="
           # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
@@ -268,6 +275,7 @@ jobs:
             --out Mu-Silicium/Platforms/Xiaomi/myronPkg/Payload/payload-big.sparse
           cd Mu-Silicium
           source ../venv/bin/activate
+          export PACKAGES_PATH="$PWD:$PWD/Binaries"
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           cd ..
           # 第二次构建只增量重跑 GenFv：Build/ 下的 FD 更新了，但
