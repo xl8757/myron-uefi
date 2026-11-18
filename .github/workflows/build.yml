@@ -241,8 +241,12 @@ jobs:
           # boot.img 由 build_uefi.py 写在 Mu-Silicium/ 根目录，固件卷在 Build/ 下。
           ls -l Mu-myron*.img BootShim/BootShim.bin
           fd=$(ls Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
-          # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。
-          test "$(stat -c %s "$fd")" -eq $((0x300000)) || { echo "FD 不是 0x300000 字节"; exit 1; }
+          # shim 的拷贝循环按 FD_SIZE 逐字节搬，体积不对必然搬进垃圾。这个值必须
+          # 与 Resources/Configs/myron.toml 的 [uefi_fd] size 一致，所以从那里读，
+          # 而不是写死：payload 现在驻留在 FD 里，这个窗口会随内核大小调整。
+          want=$(python3 -c "import tomllib,sys; print(tomllib.load(open('Resources/Configs/myron.toml','rb'))['uefi_fd']['size'])")
+          got=$(stat -c %s "$fd")
+          test "$got" -eq "$want" || { echo "FD 是 $got 字节，myron.toml 声明 $want"; exit 1; }
           sha256sum "$fd"
           img=$(ls Mu-myron*.img | head -1)
           # 校验 shim 里确实带上了本次的两处修正（DAIF 屏蔽、跳转前 cache 同步），
@@ -358,9 +362,9 @@ jobs:
           fv=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
           fd_bytes=$(stat -c %s "$fv")
           echo "firmware volume $fd_bytes bytes"
-          want=$((0x701000))
+          want=$(python3 -c "import tomllib; print(tomllib.load(open('Resources/Configs/myron.toml','rb'))['uefi_fd']['size'])")
           test "$fd_bytes" -le "$want" || {
-            echo "::error::firmware volume $fd_bytes exceeds the 0x701000 window"; exit 1; }
+            echo "::error::firmware volume $fd_bytes exceeds the $want window"; exit 1; }
 
           # myron-boot.img still carries the FD from the first build, so swap in
           # the new one and verify the gzip(BootShim + FD) body matches.
