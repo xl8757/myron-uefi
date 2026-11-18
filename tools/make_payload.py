@@ -34,7 +34,11 @@ import zlib
 from pathlib import Path
 
 SECTOR = 512
-CLUSTER_SECTORS = 1
+# 16 sectors (8 KiB) per cluster. FAT12 addresses at most 4084 clusters, so the
+# volume ceiling is clusters * cluster size: at 1 sector per cluster that is 2 MiB,
+# which cannot hold a kernel payload (the RELEASE kernel alone is 16.6 MiB). 8 KiB
+# clusters give 31.9 MiB, inside the 56 MiB XNU_Payload window the ramdisk lands in.
+CLUSTER_SECTORS = 16
 RESERVED = 1
 NUM_FATS = 2
 ROOT_ENTRIES = 512
@@ -215,12 +219,15 @@ def repack(boot: Path, ramdisk: Path, out: Path) -> None:
                   rd_off + ((old_rd + page - 1) // page) * page + second_size]
 
     struct.pack_into("<I", header, 16, len(ramdisk_blob))
-    # 0xF0000000 is the XNU_Payload window MemoryMapLib declares
-    # (0xF0000000 + 0x3800000 = 56 MiB, Reserv). The old 0xA6F00000 target was
-    # Initrd_Small, which is one megabyte and cannot hold a kernel. The region is
-    # execute-never in the memory map, which is right: the payload is a FAT volume
-    # the loader reads, never code the CPU runs in place.
-    struct.pack_into("<I", header, 20, 0xF0000000)
+    # 0x01000000 is what the stock vendor_boot.img uses for its ramdisk, and
+    # it is bootimg.py's default (base + ramdisk_offset). The previous value
+    # here was 0xA6F00000, then 0xF0000000, chosen because MemoryMapLib does
+    # not declare 0x01000000 - but MemoryMapLib only describes what UEFI uses,
+    # and the bootloader has its own memory map. Six addresses were probed on
+    # the phone and none held a FAT volume, which is what happens when the
+    # bootloader was never told an address it accepts. Matching the stock
+    # value is the one configuration known to work on this hardware.
+    struct.pack_into("<I", header, 20, 0x01000000)
     blob = bytearray(header)
     for part in (kernel, ramdisk_blob, second):
         blob += part
