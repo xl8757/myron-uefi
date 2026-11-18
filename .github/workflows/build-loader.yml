@@ -57,7 +57,11 @@ jobs:
           ls -l kernel-in
           found=$(find kernel-in -name 'kernel*.macho' -print -quit)
           test -n "$found" || { echo "::error::no kernel in the release"; exit 1; }
-          cp "$found" kernel-in/kernel.macho
+          # The release asset is already called kernel.macho, so a plain rename to
+          # the same name fails; only move when the names differ.
+          if [ "$found" != "kernel-in/kernel.macho" ]; then
+            mv "$found" kernel-in/kernel.macho
+          fi
           stat -c '%s %n' kernel-in/kernel.macho
 
       - name: build the loader
