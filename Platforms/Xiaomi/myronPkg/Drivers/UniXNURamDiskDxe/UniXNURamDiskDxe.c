@@ -131,13 +131,21 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 };
 
 //
-// Where the boot image asks ABL to place the ramdisk. The classic 0x01000000
-// sits outside the DRAM this platform maps, so a device published over it would
-// fault on the first read; this address is just below FD_Reserved, inside the
-// window the memory map already describes.
+// Where the boot image asks ABL to place the ramdisk.
 //
-#define RAMDISK_FALLBACK_BASE  0xA6F00000
-#define RAMDISK_FALLBACK_MAX   0x01000000
+// This used to be 0xA6F00000, the Initrd_Small window the memory map declares
+// just below FD_Reserved. That window is one megabyte, and a kernel payload is
+// far larger than that: the RELEASE kernel alone is 16.6 MiB, so a ramdisk
+// carrying it cannot land there. The 0xF0000000 window (XNU_Payload, 56 MiB,
+// declared Reserved in MemoryMapLib) is the memory this platform already
+// reserves for exactly this purpose and nothing else claims it.
+//
+// The address has to match the ramdisk load address make_payload.py writes into
+// the boot image header; if the two disagree the driver finds no FAT boot sector
+// and publishes nothing.
+//
+#define RAMDISK_FALLBACK_BASE  0xF0000000
+#define RAMDISK_FALLBACK_MAX   0x03800000
 
 //
 // Diagnostics for a board with no readable output channel. Everything printed
