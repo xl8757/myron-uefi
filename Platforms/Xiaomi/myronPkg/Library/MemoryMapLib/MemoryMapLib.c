@@ -60,17 +60,15 @@ gMemoryDescriptor[] = {
   // 0x01000000 那个经典 ramdisk 地址落在本平台没映射的洞里，读它会取指异常。
   // 0xA6F00000 这 1 MiB 是最初的小卷通道，现在只作为驱动找不到大卷时的
   // 兜底地址；真正的大 ramdisk 放在下面 XNU_Payload 预留区的基址。
+  {"Initrd_Small",       0xA6F00000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+  {"FD_Reserved",        0xA7000000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   //
-  // One 7 MiB region, not four. The payload ships inside the firmware volume, and
-  // that volume needs room for it: an 11 MiB payload with a 9.84 MiB kernel is
-  // about 2.78 MiB once the LZMA in FVMAIN_COMPACT has done its work. The old
-  // split (Initrd_Small, FD_Reserved, UEFI_FD, UEFI_FD_Reserved) totalled 7 MiB on
-  // the same span, but the boundaries sat inside it, so no single region could grow.
+  // The volume carries the payload, so it grew from 3 MiB to 5 MiB, upward only.
+  // Its base must stay at 0xA7100000: 0xA6F00000 is Initrd_Small, where the
+  // bootloader puts the boot image ramdisk, and an FD copied there black-screened
+  // the phone. It ends at 0xA7601000 where Info_Blk begins.
   //
-  // This ends at 0xA7601000, where Info_Blk and the rest of the runtime structures
-  // begin; those are untouched.
-  //
-  {"UEFI_FD",            0xA6F00000, 0x00701000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+  {"UEFI_FD",            0xA7100000, 0x00501000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
   {"Info_Blk",           0xA7601000, 0x00001000, AddMem, SYS_MEM, SYS_MEM_CAP, RtData, WRITE_BACK_XN},
   {"MMU_PageTables",     0xA7602000, 0x00003000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},
   {"Log_Buffer",         0xA7605000, 0x00008000, AddMem, SYS_MEM, SYS_MEM_CAP, RtData, WRITE_BACK_XN},
