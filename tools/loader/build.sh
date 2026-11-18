@@ -41,12 +41,39 @@ mkdir -p "$OUT"
 echo "== kernel =="
 stat -c '%s %n' "$KERNEL"
 
-# --- 1. the Apple device tree, with myron's own GIC, framebuffer and DRAM ----------
-# --highmem puts the kernel RAM in the high bank at 0x880000000. The low 2 GiB bank
-# holds every fixed Qualcomm XPU carve-out (MPSS 235 MiB, ADSP 85 MiB, and so on), so
-# it is not usable as kernel-managed memory.
+# --- 1. the Apple device tree -----------------------------------------------------
+# Not ios-sweet's mkadt.py: that tree is written for xnu-8796 and yields a 64-byte
+# /chosen/random-seed, where xnu-12377 reads four 64-byte seeds and panics with fewer.
+# UniXNU's devicetree.py generates the format the target kernel expects, from the
+# compiled hardware tree plus the OS profile, so that is what runs here.
+#
+# The DTS is the source, not the stock DTB: the stock tree carries a zero /memory reg
+# that ABL fills at boot, and devicetree.py refuses a zero-size DRAM range. myron.dts
+# replaces it with this unit's first DRAM bank.
+echo "== device tree =="
+DTS=${DTS:-$repo/Resources/DTBs/myron.dts}
+[ -f "$DTS" ] || { echo "no device tree source at $DTS (set DTS=)" >&2; exit 1; }
+echo "  from $DTS"
+"${DTC:-dtc}" -I dts -O dtb -o "$OUT/myron.dtb" "$DTS" 2>/dev/null
+stat -c '%s %n' "$OUT/myron.dtb"
+
 echo "== ADT =="
-"$PYTHON" "$here/../payload/mkadt.py" "$OUT/myron.adt" --highmem
+BOARD=${BOARD:-$repo/Resources/Configs/myron.toml}
+# The OS profile lives in the device repository, not here. Without it the generator
+# cannot build /chosen; fall back to the ios-sweet tree so the build still produces
+# an image, with a loud warning.
+PROFILE=${PROFILE:-$repo/Resources/Configs/profile.toml}
+if [ -n "$BOARD" ] && [ -n "$PROFILE" ]; then
+  # payload.adt.unique_chip_id is "required" for this board, so the generator
+  # refuses to run without one; CHIP_ID_SEED supplies it.
+  "$PYTHON" "$here/../payload/make-adt-myron.py" --dtb "$OUT/myron.dtb" \
+    --board "$BOARD" --os-profile "$PROFILE" --output "$OUT/myron.adt" \
+    ${CHIP_ID_SEED:+--unique-chip-id "$CHIP_ID_SEED"} \
+    || { echo "ADT generation failed" >&2; exit 1; }
+else
+  echo "  board.toml / os-profile not found; falling back to ios-sweet mkadt" >&2
+  "$PYTHON" "$here/../payload/mkadt.py" "$OUT/myron.adt" --highmem
+fi
 
 # --- 2. pack the kernel + ADT into the SWEETXNU payload ---------------------------
 echo "== payload =="
