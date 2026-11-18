@@ -462,16 +462,47 @@ PublishFallback (
   VOID
   )
 {
+  //
+  // Probe the candidates in order and report every hit, so one boot says whether
+  // the bootloader loaded a payload at all and where it put it.
+  //
+  STATIC CONST UINT64  Candidates[] = {
+    0xA6F00000ULL,
+    0xF0000000ULL,
+    0xC0000000ULL,
+    0xD0000000ULL,
+    0xE0000000ULL,
+    0x90000000ULL,
+  };
   UINT64  Size;
+  UINTN   Index;
+  BOOLEAN Published;
 
-  if (!FatVolumeSize (RAMDISK_FALLBACK_BASE, &Size)) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: nothing at 0x%lx either\n", (UINT64)RAMDISK_FALLBACK_BASE));
+  Published = FALSE;
+  for (Index = 0; Index < ARRAY_SIZE (Candidates); Index++) {
+    if (!FatVolumeSize (Candidates[Index], &Size)) {
+      DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: candidate 0x%lx empty\n", Candidates[Index]));
+      continue;
+    }
+
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: candidate 0x%lx holds a FAT volume, %lu bytes from its BPB\n",
+            Candidates[Index], Size));
+    //
+    // Report every hit so the log says where the bootloader put things, but only
+    // the first one is published: publishing two BlockIo devices over overlapping
+    // diagnostics would make "the payload" ambiguous for every later reader.
+    //
+    if (!Published) {
+      PublishRange (Candidates[Index], Candidates[Index] + Size);
+      Published = TRUE;
+    }
+  }
+
+  if (!Published) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no candidate held a FAT volume\n"));
     return FALSE;
   }
 
-  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: ramdisk at 0x%lx, %lu bytes from its BPB\n",
-          (UINT64)RAMDISK_FALLBACK_BASE, Size));
-  PublishRange (RAMDISK_FALLBACK_BASE, RAMDISK_FALLBACK_BASE + Size);
   return TRUE;
 }
 
