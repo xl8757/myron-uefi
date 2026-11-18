@@ -1,0 +1,158 @@
+# iOS 26.5.2 (23F84) OS profile for myron.
+#
+# xnu-12377.121.6 is the kernel of iOS 26 and the tree this profile builds.
+# Unlike the iOS 16 profile it replaces, nothing here is a rebase: UniXNU
+# carries profiles/arch/arm64e/ and patches/xnu-12377/ already written against
+# this exact XNU tag, so the OS series is one boot-progress patch, not 65
+# hand-rebased hunks. See MIGRATION.md for how this profile was derived.
+#
+# IDENTITY: iPad17,3 / J820AP, matching UniXNU/profiles/os/ipados-26.5.2-23F84.
+#
+# That is deliberate and is the one place this profile knowingly diverges from
+# the iOS 16 profile's iPhone X identity. The identity is not free: [kernel]
+# prelink pins kernelcache_sha256, the roots list and early_security_init, and
+# all three are read out of one specific kernelcache. The iPadOS 26.5.2
+# kernelcache is the only arm64e iOS 26 image whose pins are published and
+# verified; an iPhone 26.x kernelcache would have to be downloaded (about 11 GB)
+# and reversed before any of these values could be written honestly. Landing a
+# phone identity later means a new profile with its own measured pins, not an
+# edit to this one. See MIGRATION.md, "Identity is not a free parameter".
+
+["os"]
+"name" = "ios-26.5.2-23F84"
+# arm64e selects profiles/arch/arm64e, which is what brings in the 68-patch
+# series against xnu-12377 and CONFIG_XNU_NATIVE_PAC. It is not a cosmetic
+# field: profiles/arch/arm64/ targets plain arm64 and would not link.
+"arch" = "arm64e"
+"darwin" = "25.5.0"
+"xnu_version" = "12377.121.6"
+"xnu_revision" = "ac9718fb1af618d5ce8678d0dc6e8a58f252216f"
+# 12377 carries iokit/DriverKit; EXTERNAL_HEADERS/TrustCache comes from the last
+# tag that ships it.
+"driverkit_tag" = "xnu-12377.121.6"
+"trustcache_tag" = "xnu-8796.101.5"
+"ios_version" = "26.0"
+"abi" = []
+
+
+["ipsw"]
+# iOS 26 is not distributed as a phone-only restore for this board. The image
+# below is the iPadOS 26.5.2 full restore the identity above belongs to. It is
+# not redistributable and is not in this repository: point the build at a local
+# copy with --ipsw or UNIXNU_IPSW, or let unixnu fetch it from this URL.
+"url" = "https://updates.cdn-apple.com/2026SpringFCS/fullrestores/140-25976/000BB0A6-045B-47FF-AE4E-D8BF722E24FD/iPad17,1,iPad17,2,iPad17,3,iPad17,4_26.5.2_23F84_Restore.ipsw"
+"product" = "iPad17,3"
+"version" = "26.5.2"
+"build" = "23F84"
+"device_class" = "j820ap"
+"chip_id" = 33090
+"board_id" = 12
+"fetch" = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache"]
+
+
+["kernel"]
+
+["kernel"."prelink"]
+"tool" = "kits/XnuPrelink/emit_prelink.py"
+# Same output path the arm64e arch series and the iPadOS 26 profile use. XNU
+# 12377 produces the .noctf variant, so unlike the iOS 16 profile there is no
+# name mismatch to work around here.
+"kernel" = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
+# INHERITED FROM UniXNU/profiles/os/ipados-26.5.2-23F84 and NOT re-measured for
+# this board. It is the same restore image, so the same digest is expected, but
+# nothing in this repository has hashed the file yet: the build fails closed
+# with "does not match the kernelcache this board was qualified against" until
+# scripts/extract-ipsw-pins.py has been run against a local copy.
+#   PENDING: pin verified against a local 23F84 kernelcache.
+"kernelcache_sha256" = "0f7d50ac1bfc7cdbfc3acf5ed4934b5d5abbadee243dafb8d7487ca38b445066"
+"slide" = "-0x1000000"
+# AMFI start is a null __realmain trampoline in 23F84; the kernel patch calls
+# this original entry instead. Version bound to 23F84 - do not copy between
+# builds, and do not carry the iOS 16 profile's value here.
+"early_security_init" = "com.apple.driver.AppleMobileFileIntegrity=0xfffffe0008f13c80"
+# INHERITED FROM the iPadOS 26 profile's verified 30-entry list. emit_prelink
+# refuses to start without them, and the list is a property of this kernelcache:
+# a root that is absent from the __PRELINK_INFO of the image fails the build.
+"roots" = [
+  "com.apple.AppleFSCompression.AppleFSCompressionTypeZlib",
+  "com.apple.driver.AppleARMPlatform",
+  "com.apple.driver.AppleARMWatchdogTimer",
+  "com.apple.driver.AppleAudioClockLibs",
+  "com.apple.driver.AppleEffaceableStorage",
+  "com.apple.driver.AppleIISController",
+  "com.apple.driver.AppleM2ScalerCSCDriver",
+  "com.apple.driver.AppleMobileFileIntegrity",
+  "com.apple.driver.ApplePMGR",
+  "com.apple.driver.IODARTFamily",
+  "com.apple.filesystems.apfs",
+  "com.apple.iokit.CoreAnalyticsFamily",
+  "com.apple.iokit.IOAVFamily",
+  "com.apple.iokit.IOAudio2Family",
+  "com.apple.iokit.IOCECFamily",
+  "com.apple.iokit.IOCryptoAcceleratorFamily",
+  "com.apple.iokit.IOGPUFamily",
+  "com.apple.iokit.IOHDCPFamily",
+  "com.apple.iokit.IOMobileGraphicsFamily",
+  "com.apple.iokit.IOReportFamily",
+  "com.apple.iokit.IOSlowAdaptiveClockingFamily",
+  "com.apple.iokit.IOStorageFamily",
+  "com.apple.iokit.IOSurface",
+  "com.apple.kec.Libm",
+  "com.apple.kec.corecrypto",
+  "com.apple.kext.AppleMatch",
+  "com.apple.kext.CoreTrust",
+  "com.apple.security.AppleImage4",
+  "com.apple.security.sandbox",
+  "com.apple.iokit.IOHIDFamily",
+  "com.apple.iokit.IOHIDEventDriver",
+]
+
+
+["adt"]
+
+["adt"."root"]
+
+["adt"."root"."string"]
+"model" = "iPad17,3"
+"target-type" = "J820"
+"compatible" = "J820AP"
+
+
+["adt"."chosen"]
+
+["adt"."chosen"."string"]
+"osenvironment" = "main"
+"crypto-hash-method" = "sha2-384"
+
+
+["adt"."chosen"."u32"]
+"certificate-production-status" = 0
+"effective-production-status-ap" = 0
+"certificate-security-mode" = 1
+"effective-security-mode-sep" = 1
+"amfi-only-platform-code" = 1
+
+
+[userdata]
+# Disk images of this OS, in window order; the device sets the partition
+# geometry. Same two windows as the iOS 16 profile.
+windows = [{ name = "OS", component = "OS" }, { name = "SystemOS", component = "Cryptex1,SystemOS", optional = true }]
+
+[root]
+# INHERITED FROM UniXNU/profiles/os/ipados-26.5.2-23F84. These digests describe
+# the two APFS volumes the restore image produces, so they are a property of the
+# image and not of the board. They are not re-verified here: the payload and
+# userdata steps have not run for myron. PENDING: confirm with
+# scripts/extract-root-volume-uuid.py against the built userdata-root.img.
+os_volume_uuid = "546DFF4A-4172-4026-9F1B-7FDAD45F3D2E"
+os_image_sha256 = "b4e40913f9908f6b68e554bd79b4b95362cade0c3ce210dc378a151bc3387716"
+systemos_volume_uuid = "7A23BAC7-E86D-4DF4-B181-E6D80F212AE5"
+systemos_image_sha256 = "eadb838d10f05ff2404b6d6cbc4012e9376c90e16f0283ed6a19bd7ac8753daf"
+
+[payload.adt]
+# The APFS volume UUID inside the OS window, which the UFS block class publishes
+# and the partition scheme matches. Read out of the OS window's own volume
+# superblock by scripts/extract-root-volume-uuid.py, not guessed.
+# PENDING: re-read from myron's built userdata-root.img; the value below is the
+# one the iPadOS 26 profile carries.
+root_match_volume_uuid = "546DFF4A-4172-4026-9F1B-7FDAD45F3D2E"
