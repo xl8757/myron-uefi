@@ -41,6 +41,10 @@ on:
         description: "artifact id of the linked RELEASE kernel; the step strips it and embeds it in the FD"
         type: string
         default: "14401462538"
+      kernel_repo:
+        description: "repository that owns the kernel artifact"
+        type: string
+        default: "xl8757/myron-ios26"
   push:
     paths:
       - 'Platforms/**'
@@ -54,6 +58,10 @@ on:
 
 permissions:
   contents: write
+  # The kernel is built in the sibling repository and downloaded by artifact id.
+  # Without actions:read the gh call returns 404 and the build stops before the
+  # payload step.
+  actions: read
 
 env:
   # 与本板型已验证的固件源码一致。上游默认分支会漂移，SEC 流程一变，
@@ -288,6 +296,11 @@ jobs:
       # describes, and the result is 9.84 MiB.
       - name: fetch and strip the kernel
         env:
+          # The kernel is built in the sibling repository, so the artifact id is
+          # qualified with the repo that owns it. Pass "--repo" to gh or it looks in
+          # this repository and finds nothing.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KERNEL_REPO: ${{ inputs.kernel_repo || 'xl8757/myron-ios26' }}
           KERNEL_ARTIFACT: ${{ inputs.kernel_artifact || '14401462538' }}
         run: |
           if [ -n "${{ inputs.kernel }}" ] && [ -f "${{ inputs.kernel }}" ]; then
@@ -295,15 +308,14 @@ jobs:
             exit 0
           fi
           mkdir -p kernel-in
-          gh run download "$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${KERNEL_ARTIFACT}" --jq '.workflow_run.id')" \
-            --repo "$GITHUB_REPOSITORY" --name kernel-release-reference \
-            --dir kernel-in --pattern '*' 2>/dev/null || \
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${KERNEL_ARTIFACT}/zip" > kernel-in/art.zip
-          if [ -f kernel-in/art.zip ]; then
-            ( cd kernel-in && unzip -o -q art.zip )
-          fi
+          run=$(gh api "repos/${KERNEL_REPO}/actions/artifacts/${KERNEL_ARTIFACT}" --jq '.workflow_run.id')
+          echo "artifact ${KERNEL_ARTIFACT} belongs to run ${run} in ${KERNEL_REPO}"
+          gh run download "$run" --repo "$KERNEL_REPO" \
+            --name kernel-release-reference --dir kernel-in || {
+              echo "::error::cannot download the kernel artifact"; exit 1; }
           found=$(find kernel-in -name 'mach.release*.noctf' -print -quit)
           test -n "$found" || { echo "::error::no kernel in the artifact"; find kernel-in -type f | head; exit 1; }
+          stat -c '%s %n' "$found"
           python3 tools/strip-macho.py "$found" kernel-in/kernel-minimal.macho
           stat -c '%s %n' kernel-in/kernel-minimal.macho
 
