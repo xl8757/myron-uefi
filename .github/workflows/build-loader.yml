@@ -23,6 +23,10 @@ on:
         description: "kernel boot-args for the payload"
         type: string
         default: "debug=0xc serial=3 cpus=1 keepsyms=1 -v"
+      chip_id_seed:
+        description: "hex seed for /chosen/unique-chip-id; the board config marks it required"
+        type: string
+        default: "1234567890abcdef"
 
 permissions:
   contents: write
@@ -37,9 +41,13 @@ jobs:
       - name: deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld llvm python3
+          # device-tree-compiler: the ADT generator reads the compiled hardware tree,
+          # and the DTS is the source because the stock DTB carries a zero /memory reg
+          # that ABL fills at boot.
+          sudo apt-get install -y clang lld llvm python3 device-tree-compiler
           clang --version | head -1
           ld.lld --version | head -1
+          dtc --version
 
       # The kernel has to keep LC_DYLD_CHAINED_FIXUPS and the bytes it points at:
       # mkpayload.py walks those chains and rewrites every pointer to its unslid
@@ -69,9 +77,11 @@ jobs:
           KERNEL: kernel-in/kernel.macho
           OUT: out/loader
           CMDLINE: ${{ inputs.cmdline }}
+          CHIP_ID_SEED: ${{ inputs.chip_id_seed }}
         run: |
           chmod +x tools/loader/build.sh
           CC=clang LD=ld.lld OBJCOPY=llvm-objcopy READELF=llvm-readelf \
+            DTC=dtc PYTHON=python3 \
             tools/loader/build.sh
 
       - name: report
