@@ -215,9 +215,12 @@ def repack(boot: Path, ramdisk: Path, out: Path) -> None:
                   rd_off + ((old_rd + page - 1) // page) * page + second_size]
 
     struct.pack_into("<I", header, 16, len(ramdisk_blob))
-    # 0x01000000 在本平台未映射，固件读不到。放到 FD_Reserved 下面，
-    # 那段内存已经由 MemoryMapLib 描述（见 Initrd 描述符）。
-    struct.pack_into("<I", header, 20, 0xA6F00000)
+    # 0xF0000000 is the XNU_Payload window MemoryMapLib declares
+    # (0xF0000000 + 0x3800000 = 56 MiB, Reserv). The old 0xA6F00000 target was
+    # Initrd_Small, which is one megabyte and cannot hold a kernel. The region is
+    # execute-never in the memory map, which is right: the payload is a FAT volume
+    # the loader reads, never code the CPU runs in place.
+    struct.pack_into("<I", header, 20, 0xF0000000)
     blob = bytearray(header)
     for part in (kernel, ramdisk_blob, second):
         blob += part
