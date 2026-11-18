@@ -20,9 +20,9 @@
 #
 # Inputs:
 #   KERNEL   linked XNU Mach-O. Must keep LC_DYLD_CHAINED_FIXUPS and the bytes they
-#            point at: mkpayload.py walks those chains and rewrites every pointer.
-#            Stripping __LINKEDIT to shrink the file destroys them - that mistake was
-#            made once already.
+#            point at: XNU applies those chains itself after entry, so the payload has
+#            to carry them intact. Stripping __LINKEDIT destroys them - that mistake
+#            was made once already.
 #   CC/LD    an AArch64 clang and ld.lld able to target aarch64-none-elf
 set -euo pipefail
 
@@ -50,8 +50,13 @@ echo "== ADT =="
 
 # --- 2. pack the kernel + ADT into the SWEETXNU payload ---------------------------
 echo "== payload =="
+# --no-fixups: keep the chained fixups in the segment bytes for XNU to apply
+# itself. UniXNU's DarwinBoot states the rule: "XNU rebases and signs its own fixup
+# chains after entry; firmware only copies root mappings". The ios-sweet helper
+# predates that and rewrites every pointer to a plain VA, which a kernel that
+# expects to do the rebasing cannot use.
 "$PYTHON" "$here/../payload/mkpayload.py" "$KERNEL" "$OUT/myron.adt" "$OUT/payload.bin" \
-  --cmdline "${CMDLINE:-debug=0xc serial=3 cpus=1 keepsyms=1 -v}"
+  --cmdline "${CMDLINE:-debug=0xc serial=3 cpus=1 keepsyms=1 -v}" --no-fixups
 
 # --- 3. build the loader ---------------------------------------------------------
 echo "== loader =="
