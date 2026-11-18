@@ -458,61 +458,139 @@ FatVolumeSize (
   shim. The ramdisk is in memory either way; its own boot sector says how long
   it is, so nothing else is needed.
 **/
+#define DRAM_BASE  0x80000000ULL
+
+/**
+  Search DRAM for the payload's FAT boot sector.
+
+  The bootloader picks the ramdisk address itself on this board and reports nothing
+  about it (no device tree, x0 = 0), so the volume has to be found rather than
+  looked up. Only regions at or above DRAM_BASE are read: everything below that is
+  MMIO on this platform, which is exactly why the earlier probes at 0x01000000
+  faulted instead of returning data.
+
+  @param[out] FoundStart    First byte of the FAT volume.
+  @param[out] FoundSize     Its size, taken from its own BPB.
+  @param[out] ScannedBytes  How much DRAM the scan covered, for the log.
+
+  @retval TRUE   A FAT volume was found.
+  @retval FALSE  None was.
+**/
+STATIC
+BOOLEAN
+ScanDramForPayload (
+  OUT UINT64  *FoundStart,
+  OUT UINT64  *FoundSize,
+  OUT UINT64  *ScannedBytes
+  )
+{
+  EFI_STATUS             Status;
+  EFI_MEMORY_DESCRIPTOR  *Map;
+  UINTN                  MapSize;
+  UINTN                  MapKey;
+  UINTN                  DescriptorSize;
+  UINT32                 DescriptorVersion;
+  UINTN                  Index;
+  UINT64                 Address;
+  UINT64                 RegionEnd;
+  UINT64                 Size;
+
+  *FoundStart   = 0;
+  *FoundSize    = 0;
+  *ScannedBytes = 0;
+
+  Map     = NULL;
+  MapSize = 0;
+  Status  = gBS->GetMemoryMap (&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: scan: GetMemoryMap sizing returned %r\n", Status));
+    return FALSE;
+  }
+
+  MapSize += 16 * DescriptorSize;
+  Status   = gBS->AllocatePool (EfiLoaderData, MapSize, (VOID **)&Map);
+  if (EFI_ERROR (Status) || (Map == NULL)) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: scan: AllocatePool returned %r\n", Status));
+    return FALSE;
+  }
+
+  Status = gBS->GetMemoryMap (&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: scan: GetMemoryMap returned %r\n", Status));
+    gBS->FreePool (Map);
+    return FALSE;
+  }
+
+  for (Index = 0; Index < MapSize / DescriptorSize; Index++) {
+    EFI_MEMORY_DESCRIPTOR  *Entry;
+
+    Entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)Map + Index * DescriptorSize);
+    if (Entry->PhysicalStart < DRAM_BASE) {
+      continue;
+    }
+
+    if (Entry->NumberOfPages < 256) {
+      continue;
+    }
+
+    Address   = Entry->PhysicalStart;
+    RegionEnd = Entry->PhysicalStart + (Entry->NumberOfPages << EFI_PAGE_SHIFT);
+
+    for ( ; Address + 0x200 <= RegionEnd; Address += EFI_PAGE_SIZE) {
+      CONST UINT8  *Probe;
+
+      Probe = (CONST UINT8 *)(UINTN)Address;
+      if ((Probe[0] != 0xEB) || (CompareMem (Probe + 3, "MSWIN4.1", 8) != 0)) {
+        continue;
+      }
+
+      if (!FatVolumeSize (Address, &Size)) {
+        continue;
+      }
+
+      DEBUG ((
+        DEBUG_ERROR,
+        "UNIXNURAMDISK: scan found a FAT volume at 0x%lx, %lu bytes from its BPB\n",
+        Address,
+        Size
+        ));
+      *FoundStart = Address;
+      *FoundSize  = Size;
+      gBS->FreePool (Map);
+      return TRUE;
+    }
+
+    *ScannedBytes += RegionEnd - Entry->PhysicalStart;
+  }
+
+  gBS->FreePool (Map);
+  DEBUG ((
+    DEBUG_ERROR,
+    "UNIXNURAMDISK: scan of %lu bytes of DRAM found no FAT volume\n",
+    *ScannedBytes
+    ));
+  return FALSE;
+}
+
 STATIC
 BOOLEAN
 PublishFallback (
   VOID
   )
 {
-  //
-  // Probe the candidates in order and report every hit, so one boot says whether
-  // the bootloader loaded a payload at all and where it put it.
-  //
-  //
-  // Every entry here must be inside a region MemoryMapLib declares, or the read
-  // itself faults and the platform resets before anything reaches the log. An
-  // earlier version of this list carried 0xD0000000 and 0xE0000000, which are not
-  // mapped, and 0x90000000, which lies inside MPSS_REGION and must not be touched.
-  //
-  STATIC CONST UINT64  Candidates[] = {
-    0x01000000ULL,   // the stock vendor_boot ramdisk address
-    0xA6F00000ULL,   // Initrd_Small
-    0xF0000000ULL,   // XNU_Payload
-    0xB8000000ULL,   // DXE_Heap
-    0xA8000000ULL,   // Kernel
-    0xF8800000ULL,   // OEM_VM_REGION
-  };
+  UINT64  Start;
   UINT64  Size;
-  UINTN   Index;
-  BOOLEAN Published;
+  UINT64  Scanned;
 
-  Published = FALSE;
-  for (Index = 0; Index < ARRAY_SIZE (Candidates); Index++) {
-    if (!FatVolumeSize (Candidates[Index], &Size)) {
-      DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: candidate 0x%lx empty\n", Candidates[Index]));
-      continue;
-    }
-
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: candidate 0x%lx holds a FAT volume, %lu bytes from its BPB\n",
-            Candidates[Index], Size));
-    //
-    // Report every hit so the log says where the bootloader put things, but only
-    // the first one is published: publishing two BlockIo devices over overlapping
-    // diagnostics would make "the payload" ambiguous for every later reader.
-    //
-    if (!Published) {
-      PublishRange (Candidates[Index], Candidates[Index] + Size);
-      Published = TRUE;
-    }
-  }
-
-  if (!Published) {
-    DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: no candidate held a FAT volume\n"));
+  if (!ScanDramForPayload (&Start, &Size, &Scanned)) {
     return FALSE;
   }
 
+  PublishStatus (2, MARKER_WHITE, L"UNIXNURAMDISK: payload found by scan");
+  PublishRange (Start, Start + Size);
   return TRUE;
 }
+
 
 EFI_STATUS
 EFIAPI
