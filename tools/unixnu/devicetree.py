@@ -382,6 +382,13 @@ def generate(dtb, config, *, unique_chip_id=None, data=False, trust=False, addon
     for entry in cpus.children:
         if not entry.enabled():
             continue
+        # Only real CPUs. A board DTB may also carry cpu-map (the core topology) and
+        # idle-states under /cpus, and neither has a reg, so treating them as CPUs
+        # fails on "CPU affinity must fit a u32" or on a missing reg. The Devicetree
+        # Specification marks CPUs with device_type = "cpu"; everything else under
+        # /cpus is decoration this ADT does not use.
+        if entry.strings('device_type') != ['cpu']:
+            continue
         values = registers(entry)
         if len(values) != 1 or values[0][0] > 0xffffffff:
             raise Error(f'{entry.name}: CPU affinity must fit a u32')
