@@ -1,0 +1,407 @@
+# UniXNU board description for the Redmi K90 Pro Max (myron, SM8850 / Canoe).
+# Format 2 skeleton derived from Asultop/UniXNU-NX769J, now targeting iOS 26.5.2
+# (23F84, Darwin 25.5.0, XNU 12377.121.6, arm64e). MIGRATION.md records every
+# field that changed and why; the short version is that the arch layer moved from
+# arm64 to arm64e, the patch series moved from a 65-hunk device-local rebase onto
+# xnu-8796 to the shared arm64e series against xnu-12377, and the forged identity
+# moved from iPhone X to iPad17,3 because that is the one arm64e iOS 26
+# kernelcache whose prelink pins are published and verified.
+# EVALUATION SKELETON - not buildable until PENDING.json is resolved.
+#
+# NX769J covers RedMagic 9 Pro / 9 Pro+ and RedMagic 9S Pro / 9S Pro+, the ZTE
+# nubia gaming phones built on Qualcomm "pineapple" (Snapdragon 8 Gen 3).
+#
+# Hardware values are taken from public NX769J sources and from the mainline
+# SM8650 SoC description. See porting.toml for the source of each value and for
+# the inputs that still require a measurement on the device.
+#
+#   SoC register map and CPU topology : u-boot/u-boot dts/upstream/src/arm64/qcom/sm8650.dtsi
+#   Board identity and boot format    : Klozz/nubia_nx769j_dump, Ling0925/android_device_nubia_NX769J
+#   Touch and peripheral firmware     : DarkestSpawn/device_NX769J
+
+schema_version = 2
+
+[board]
+name = "myron"
+soc = "SM8850"
+# There is no UniXNU-sm8650-common yet. sm8550-common is pinned because its SoC
+# register map matches SM8650 for every resource this port uses: GIC distributor
+# 0x17100000 and redistributors 0x17180000, UFS host 0x1d84000/0x3000, UFS PHY
+# 0x1d80000/0x2000, GPU 0x3d00000, GMU 0x3d6a000 and GPU SMMU 0x3da0000. The CPU
+# compatible strings and the Adreno generation do differ and are overridden in
+# dts/nx769j.dts and configs/nx769j_defconfig.
+soc_source = "sm8550"
+# iOS 26.5.2 (build 23F84), Darwin 25.5.0, XNU 12377. The profile lives in this
+# repository at os-profiles/ios-26.5.2-23F84/ until it is contributed to
+# UniXNU/profiles/os/. See MIGRATION.md: the identity is iPad17,3 because the
+# published arm64e prelink pins belong to that kernelcache.
+#
+# Retargeting to iPadOS 17.7.11 (21H461) was investigated and is documented in
+# docs/RETARGET-17.7.11.md. It was not adopted: the sibling port that boots 17.7.11
+# needs 67 files this repository does not have - 27 drivers under package/ and 20
+# build scripts - and the reference repository is documentation rather than a
+# reproducible build. This configuration builds and its prelink emits.
+os_profile = "ios-26.5.2-23F84"
+description = "Redmi K90 Pro Max (myron, SM8850 / Canoe), iOS 26.5.2 target"
+kit = "myron"
+
+[components]
+# Arrays replace the inherited arrays from the ARM64, SoC and OS profiles, so
+# this list is the complete selection. Deliberately omitted:
+#   Adreno740, AdrenoMetal, Sm8550Platform, AdrenoPM4, AdrenoFirmware,
+#   ArmSmmu4K  - the catalog GPU stack targets Adreno 740 on SM8550. NX769J has
+#                Adreno 750 ("qcom,adreno-43051401", "qcom,adreno-gmu-750.1").
+#   ShengHidInput, ShengNovatekTouch, QcomGeniSpi - the touch driver is for the
+#                Novatek NT36532E. NX769J uses a Goodix 9916R.
+#   Ath12kWifi   - declares os_abi "nw_abi platform interface", which does not
+#                match ipados-17.7.11-21H461.
+include = [
+  "ArmDTPlatform",
+  "ArmCpu",
+  "SoftwareAES",
+  "XnuPrelink",
+  "DarwinBoot",
+  "ShengUfs",
+  "RamBlock",
+  "VerifiedRoot",
+  "GopFramebuffer",
+  "AppleKeyStoreState",
+]
+
+
+# The prelink inputs come from the OS profile ([kernel.prelink] there holds the
+# tool, the kernel path, the kernelcache hash and the 31 roots); this table only
+# adds what is board-specific.
+#
+# --allow-missing is deliberate and it makes this an EXPERIMENTAL image. The
+# native kernel pairs 6805 of 21113 original functions - 32% - because a
+# DEVELOPMENT-config build (29411 functions, 841 diversities) is measured against
+# Apple's RELEASE-LTO kernelcache (21113, 2885), so most functions have no
+# reliable anchor. XnuPrelink stops by design on unresolved mappings; this flag
+# lets it write the candidate anyway and records every gap in
+# kernel.macho.json for review. Expect a boot that fails at the first rebound
+# kext rather than a working system.
+#
+# --allow-missing is deliberate and it makes this an EXPERIMENTAL image. The
+# native kernel pairs 7726 of 21113 original functions - 36.6% - so a boot is
+# expected to fail rather than to work; the flag lets emit_prelink write the
+# candidate anyway and record every gap in kernel.macho.json. What it produced:
+# 639 unresolved closure references and 1546 stubbed functions.
+#
+# PENDING: raise the pairing rate before treating the output as bootable. The
+# measurement in docs/RETARGET-17.7.11.md and work/BRINGUP-LOG.md says the limit
+# is function granularity, not anchor coverage: the pinned kernelcache is
+# RELEASE-LTO with 21113 functions averaging 2230 bytes, our build is not
+# inlined with 25782 averaging 297 bytes. LTO is not available in this
+# toolchain (cctools-port is built with --disable-lto-support).
+[kernel.prelink]
+extra_args = ["--allow-missing"]
+
+[kernel]
+defconfig = "myron_ios26_defconfig"
+# Archive builders run in order before the kernel link. component:<ID> runs the
+# component's own build entry from the catalog.
+#
+# build-mockfs-fixture.py is deliberately absent. It compiles an offline test
+# fixture, and the kernel only force-loads it when MOCKFS_MODE is 1
+# (build-xnu-4k-baseline.sh reads MOCKFS_MODE from XNU_SOURCE_MOCKFS). This
+# board leaves CONFIG_XNU_SOURCE_MOCKFS unset, so the archive is never a link
+# input and building it only adds a stage that can fail. Add it back, and turn
+# CONFIG_XNU_SOURCE_MOCKFS on, together.
+#
+# build-virtio-mmio-bindings.py is replaced by build-storage-bindings.py. The
+# former binds the block driver through build/storage-abi/interface-audit.json,
+# which audit-storage-interface.py derives from the iPadOS 17.7.11 kernelcache
+# and cross-checks against a live gdb observation of the IOBlockStorageDevice
+# metaclass -- neither of which an iOS 16.5 port has. The latter binds the same
+# 190 slots from scripts/prelink-storage-bindings.json, measured statically out
+# of the kernelcache by scripts/scan-prelink-storage.py, so it needs no device.
+archives = [
+  "build-corecrypto-14.py",
+  "build-corecrypto-14.py --namespace",
+  "component:ArmDTPlatform",
+  "component:ArmCpu",
+  "component:SoftwareAES",
+  "build-software-aes-bindings.py",
+  "build-libpthread-kernel.py",
+  "component:ShengUfs",
+  "build-sheng-source-storage.py --policy-dir scripts/policies/ios-26.5.2-23F84",
+  "component:AppleKeyStoreState",
+  "component:RamBlock",
+  # build-storage-bindings.py is deliberately absent. It resolved the inherited
+  # IOBlockStorageDevice entries to absolute addresses in the original prelinked kext,
+  # which was the right approach while the kernel carried no IOStorageFamily classes.
+  # build-sheng-source-storage.py now compiles SourceStorage.cpp and the class itself,
+  # so the static bindings collided with it: 17 duplicate symbols (the class vtable,
+  # metaclass, gMetaClass and every inherited method). UniXNU-sheng 26 lists the source
+  # adapter and not the bindings script, for the same reason.
+  "build-verified-root.py",
+]
+config_fragments = ["arch:configs/common.config", "soc:configs/sm8550.config", "os:configs/ios.config"]
+# The resolved order:
+#   arch    profiles/arch/arm64e/patches/xnu/series   68 patches against xnu-12377
+#   soc     UniXNU-sm8550-common/patches/xnu/series   native-smp-secondary, sheng-platform-power
+#   os      os-profiles/ios-26.5.2-23F84/patches/xnu/series   zzz-boot-progress only
+#   device  patches/xnu26/series                     empty (see below)
+#
+# The soc path is patches/xnu/, NOT patches/xnu-12377/. Verified against the
+# pinned commit 23b2049fcd9e: that tree has patches/xnu/{series,
+# native-smp-secondary.patch,sheng-platform-power.patch} and no xnu-12377
+# directory. UniXNU-sheng's board.toml names patches/xnu-12377/series and would
+# resolve to a directory that does not exist at that pin; this repository pins
+# the same commit, so it names the path that is actually there.
+#
+# patches/xnu/series in this repository is the iOS 16 rebase and is NOT part of
+# this order. It is 65 hunks hand-rebased onto xnu-8796 because no shared series
+# existed for that tag; against xnu-12377 the arm64e series above already
+# carries the same changes, and applying both applies them twice.
+#
+# THE SOC SERIES IS NOT USED AS A WHOLE. UniXNU-sm8550-common's
+# patches/xnu/series holds two patches, and the first of them does not apply
+# here: native-smp-secondary.patch edits MAX_CPUS in
+# pexpert/pexpert/arm64/board_config.h at line 134, but
+# bcm2837-machine-config.patch — the first patch of the arm64e arch series —
+# inserts a whole ARM64_BOARD_CONFIG_BCM2837 block into that same file at line
+# 304, which moves the context the SoC patch expects. CI failed on exactly this
+# on 2026-11-16:
+#   error: patch failed: pexpert/pexpert/arm64/board_config.h:134
+#   error: pexpert/pexpert/arm64/board_config.h: patch does not apply
+# It is not needed either. The SoC patch raises MAX_CPUS from 4 to 8 and leaves
+# MAX_CPU_CLUSTERS at 1; the arch block already sets MAX_CPUS 8 and
+# MAX_CPU_CLUSTERS 2, which is what SM8850 actually has (two clusters). The arch
+# value is both newer and more correct, so the SoC patch is dropped rather than
+# rebased.
+#
+# The second SoC patch, sheng-platform-power.patch, is kept: it only calls
+# sheng_pmgr_run() under `#if defined(XNU_SHENG_PMGR) && XNU_SHENG_PMGR`, and
+# this board sets CONFIG_XNU_SHENG_PMGR=n, so it compiles to nothing. It is
+# carried so that turning that switch on later does not also require editing the
+# patch order. It is listed in patches/xnu26/series rather than named here,
+# because every patch_series entry must be a SERIES FILE: the driver reads each
+# entry as a list of patch paths, so naming a .patch here makes it parse the
+# patch body as a series and fail.
+# The order matters for more than patch application: zzz-boot-progress.patch is
+# the last patch by name and by intent (the zzz prefix is deliberate), so the OS
+# series has to come last. Listing the device series after it put the vendored
+# SoC patch at the end instead, and CI failed with
+#   AssertionError: sheng-platform-power.patch
+# on the assertion that the final patch is zzz-boot-progress.patch. The device
+# series therefore sits before the OS series.
+patch_series = [
+  "arch:patches/xnu/series",
+  "device:patches/xnu26/series",
+  "os:patches/xnu/series",
+]
+
+# kernel.prelink is inherited from the selected OS profile
+# (os-profiles/ios-26.5.2-23F84/profile.toml): tool, kernel path,
+# kernelcache_sha256, slide, early_security_init and roots. Only board-specific
+# overrides belong here. Note that the caihong SM8650 port reports
+# "AMFI: No PMGR?" panics from early_security_init on a SoC without an Apple
+# PMGR block; see the packaging area of porting.toml before changing it.
+#
+# That warning does not apply as written to the iOS 26 profile: its
+# early_security_init is an AppleMobileFileIntegrity __TEXT_EXEC address inside
+# the prelinked module, not a PMGR probe, and it is measured for 23F84. It is
+# still unverified on this board, which is why the packaging area records it as
+# an open risk rather than a passed checkpoint.
+
+# [ipsw] and [kernel.prelink] are inherited from the selected OS profile
+# (os-profiles/ios-26.5.2-23F84/profile.toml). Tables merge by key, so a board
+# that needs to override one field can declare just that field here.
+#
+# The restored image is the iPadOS 26.5.2 (23F84) J820AP restore image. The ADT
+# forges that identity onto this board, so neither the IPSW model nor the
+# iPadOS name describes the phone itself.
+
+[userdata]
+# Measured on the device with `sgdisk --print /dev/block/sda`; see
+# device-inputs.md. userdata is /dev/block/sda12 and ends on the last usable
+# sector, so it is the last occupied partition and no unixnu partition exists
+# yet. The GPT holds 32 entries and uses 12.
+#
+# Writing the OS windows into these extents overwrites Android's /data. To keep
+# the stock system bootable, carve a separate unixnu partition first; see
+# README.md and https://unixnu.com/porting/dual-system-partition.
+partition = "unixnu"   # dedicated GPT entry carved 2026-11-15; Android userdata untouched
+first_lba = 0x5AAEB00
+last_lba  = 0x7AAEAFF
+lba_bytes = 4096
+windows = [
+  { name = "OS", component = "OS" },
+  { name = "SystemOS", component = "Cryptex1,SystemOS" },
+]
+
+# payload.adt.root_match_volume_uuid is read out of the OS window of the built
+# userdata image, which is where the APFS root volume actually lives. It is not
+# a value to guess: scripts/extract-root-volume-uuid.py reads it.
+
+[firmware]
+# The myron Mu-Silicium platform package, from the sibling myron-uefi
+# repository at Platforms/Xiaomi/myronPkg. That package was generated from the
+# published songyuan-uefi package, which targets the same SM8850 / Canoe board;
+# it builds and publishes SILICIUM_UEFI.fd but has never been fastboot-booted.
+# See docs/UEFI-FIRMWARE.md for the derivation and for the values still open.
+#
+# The vendor directory is Xiaomi, which is where myron-uefi lives. The iOS 16
+# skeleton's comment here correctly described a ZTE package because it was
+# derived from the NX769J board; myron is not that board and the paths below
+# name the Xiaomi one.
+config = "myron"
+dsc = "Platforms/Xiaomi/myronPkg/myron.dsc"
+fd = "Build/myronPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
+# A preflight script checks the vendor inputs before EDK II runs, so a missing
+# or wrong firmware binary fails here instead of deep inside a C build.
+preflight = ["scripts/check-myron-firmware.py"]  # PENDING: port from the NX769J checker
+# Mu-Silicium submodules this board needs. Mu_Basecore is not listed: it is the
+# separate {edk2} checkout that ./unixnu fetch resolves, and firmware.py points
+# EDK_TOOLS_PATH at it rather than at the submodule.
+submodules = [
+  "Common/Mu",
+  "Common/Mu_OEM_Sample",
+  "Silicium-ACPI",
+  "Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl",
+]
+# Applied to the shared edk2 tree for the build and reverted afterwards.
+patches = ["Resources/MuPatches/Gic-Spurious.patch"]
+# PACKAGES_PATH for the EDK II build. {tree}/package carries UniXNUPkg and
+# {tree}/drivers/DarwinBoot carries DarwinBootPkg, so the DSC can name
+# UniXNUPkg/Application/UniXNU/UniXNU.inf and DarwinBootPkg/Driver/DarwinBoot.inf
+# without those trees living in the Mu-Silicium checkout.
+packages = [
+  "{uefi}",
+  "{uefi}/Platforms/Xiaomi",
+  "{tree}/package",
+  "{tree}/drivers/DarwinBoot",
+  "{edk2}",
+  "{uefi}/Common/Mu",
+  "{uefi}/Common/Mu_OEM_Sample",
+  "{uefi}/Silicon/Qualcomm",
+  "{uefi}/Silicon/Silicium",
+  "{uefi}/Silicium-ACPI",
+  "{uefi}/Silicium-ACPI/Platforms/Xiaomi",
+  "{uefi}/Silicium-ACPI/Silicon/Qualcomm",
+]
+
+[firmware.defines]
+DEVICE_MODEL = "myron"
+# The four defines DeviceBuild.py would otherwise set. firmware.py drives EDK II
+# build directly and so bypasses Mu-Silicium's own build driver, which is where
+# these come from -- an undefined ENABLE_SECUREBOOT reaches
+# SiliciumPkg/Library/SecureBootHandlerLib as an empty token and fails the
+# preprocessor. Same set, same values as the sibling RedMagic port.
+ENABLE_SECUREBOOT = "1"
+MEMORY_PROTECTION = "TRUE"
+SHIP_MODE = "FALSE"
+BUILDID_STRING = "myron-ios26-research"
+
+# The NX769J board configuration records BOARD_BOOTIMG_HEADER_VERSION := 4, but
+# that is the Android build system's setting for building a stock boot.img, not
+# what unixnu can pack and verify. scripts/unixnu/bootimg.py verify() unpacks
+# ten u32 words from offset 8 and compares header_version and pagesize at the
+# v0/v1/v2 offsets; a v4 header has those fields elsewhere, so the round-trip
+# check fails with "boot image header does not match the requested parameters".
+# The tool's own DEFAULTS use header_version 0.
+#
+# The sibling RedMagic port UniXNU-nx729j hit exactly this and fixed it the same
+# way, then fastboot-booted the image on hardware. If the NX769J ABL turns out
+# to reject a v0 image, the answer is to extend verify() for v4 rather than to
+# set the value here.
+[bootimg.image]
+base = 0x0
+pagesize = 4096
+header_version = 0
+
+# The stock bootloader keeps the contiguous-splash region and expects it in the
+# boot image's device tree. Measured on the device from
+# /proc/device-tree/reserved-memory/splash_region; see device-inputs.md. The
+# node name and the cont_splash_region label follow the same convention as
+# UniXNU-sheng, and the region size 0x2b00000 matches sheng and shennong.
+[[bootimg.dtb_node]]
+path = "/reserved-memory/splash_region"
+props = [
+  { name = "label", type = "s", value = "cont_splash_region" },
+  { name = "reg", type = "x", value = ["0x0", "0xfc800000", "0x0", "0x2b00000"] },
+]
+
+[payload]
+volume = "MYRONESP"
+# 48 MiB, not 208. The volume becomes the boot image's ramdisk and lands in the
+# XNU_Payload window the memory map declares (0xF0000000 + 0x3800000 = 56 MiB),
+# so it has to stay inside that. 48 MiB leaves room for the RELEASE kernel
+# (16.6 MiB) plus the FAT overhead and a second entry.
+#
+# 208 MiB was sized for the prelinked fileset, which is 82 MiB and is not what
+# this board boots: DarwinBoot rejects MH_FILESET ("MH_FILESET input is still
+# unsupported by this loader"), so the kernel handed to it is the linked
+# MH_EXECUTE image and the volume only has to carry that.
+size_mib = 48
+loader = "firmware"
+title = "myron iOS 26.5.2 bring-up"
+# DRAM range the ADT hands to XNU. The board has two non-contiguous banks, as
+# recorded from this unit's own boot log (myron-observed.json):
+#   0x80000000  + 0x80000000   (2 GiB)
+#   0x880000000 + 0x380000000  (14 GiB)
+# Only the first bank is declared, which is what the working iPadOS 17.7.11
+# configuration for this board does ("first DRAM bank; XNU only reports it").
+# dts/myron.dts /memory must carry exactly this range: devicetree.py refuses a
+# mismatch, and the static DTB's placeholder reg is replaced for that reason.
+dram_size = "0x80000000"
+# Disabled for the first bring-up build: patch-xnu-entry-probe.py --panic-screen
+# needs Mu-Silicium Silicon/Silicium/SiliciumPkg/Library/FrameBufferSerialPortLib/Font.h,
+# and no public checkout of that tree is reachable (2026-11-15). With this false the
+# entry-probe patch is skipped entirely, so no stage bars either. Serial (-v serial=3)
+# and the firmware Advanced Logger remain the feedback channels. Re-enable once a
+# Mu-Silicium checkout is wired with --uefi.
+panic_screen = false
+# Adds a Tools entry to the generated boot menu, which is where AdvancedLogDxe
+# publishes the firmware log as QR codes. See docs/UEFI-FIRMWARE.md.
+tools = true
+timeout = 3
+kernel_args = ["-v", "serial=3"]
+
+[payload.adt]
+# The board chip id, parsed as hex by devicetree.py. iPad17,3 is 0x8142, which is
+# the value UniXNU-sheng writes as "8142" for the same identity and the same
+# 33090 (0x8142) [ipsw] chip_id the profile declares.
+#
+# This replaces "207", the iPhone X-era value the iOS 16 profile carried. The
+# tool performs no cross-check between this field and the profile, so a stale
+# value is silent: MobileDevice reads it over lockdown, looks it up with
+# board-id, and reports "a software update is required" when the pair does not
+# match the product. PENDING: confirm against a first boot.
+chip_id = "8142"
+# DarwinBoot's handoff window size. 8 GiB matches the iPadOS 17.7.11 board that
+# reached SpringBoard on this phone: it is also DarwinBoot's maximum, and the
+# 4 KiB-page bootstrap page-table pool needs Apple's large-memory value (34
+# pages). The window lands in the second bank (0x880000000..0xC00000000), so
+# 8 GiB fits with room to spare.
+owned_memory_size = "0x200000000"
+# The APFS volume UUID inside the OS window. The UFS block class publishes the
+# window, the partition scheme publishes the volume and XNU matches it. This one
+# is read out of the OS window's own volume superblock by
+# scripts/extract-root-volume-uuid.py; see device-inputs.md under "Root volume".
+# It is the volume UUID, not the container UUID.
+#
+# PENDING: taken from os-profiles/ios-26.5.2-23F84, not measured for myron. The
+# old value (DADD93F8-...-0F11E64172F7) belongs to the iOS 16.7.16 / 20H392
+# restore image and must not be used with an iOS 26 image: the UFS block class
+# publishes this window by volume UUID, so a mismatch leaves the root unmounted.
+# scripts/extract-root-volume-uuid.py must be run on myron's built
+# userdata-root.img once that step can run at all.
+root_match_volume_uuid = "546DFF4A-4172-4026-9F1B-7FDAD45F3D2E"
+cpu_regs = "0"
+psci_method = "smc"
+packed_data_ramdisk = true
+# The OS profile forges iPad17,3, so the board must publish the iPad identity
+# shape. The iOS 16 profile used iPhone X (iPhone10,3 / D22AP) and set this false.
+ipad_identity = true
+unique_chip_id = "required"
+
+[device_tree]
+# Curated handoff tree: only the nodes that carry unixnu,adt-name reach the ADT
+# (Format 2 exports arm-io children from that property alone). Generated by
+# work/make_handoff_dts.py from the values the iPadOS 17.7.11 port used.
+# dts/myron.dts stays in the repository as the byte-exact stock reference; it is
+# not the source here because it has no ADT annotations.
+source = "device:dts/myron-handoff.dts"
