@@ -133,18 +133,20 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 //
 // Where the boot image asks ABL to place the ramdisk.
 //
-// This used to be 0xA6F00000, the Initrd_Small window the memory map declares
-// just below FD_Reserved. That window is one megabyte, and a kernel payload is
-// far larger than that: the RELEASE kernel alone is 16.6 MiB, so a ramdisk
-// carrying it cannot land there. The 0xF0000000 window (XNU_Payload, 56 MiB,
-// declared Reserved in MemoryMapLib) is the memory this platform already
-// reserves for exactly this purpose and nothing else claims it.
+// 0x01000000 is the stock value: the phone's own vendor_boot.img asks the
+// bootloader for exactly this address, and it is bootimg.py's default
+// (base + ramdisk_offset). Two other addresses were tried here and neither
+// worked - 0xA6F00000 (the 1 MiB Initrd_Small window) and 0xF0000000 (the 56 MiB
+// XNU_Payload window) - and a probe of six DRAM addresses found no payload at
+// any of them, which is what a bootloader that never accepted the address looks
+// like. MemoryMapLib does not declare 0x01000000, but MemoryMapLib only
+// describes the regions UEFI itself uses; the bootloader's map is its own, and
+// the stock image proves it loads there.
 //
-// The address has to match the ramdisk load address make_payload.py writes into
-// the boot image header; if the two disagree the driver finds no FAT boot sector
-// and publishes nothing.
+// This has to match the ramdisk address make_payload.py writes into the boot
+// image header, or the driver finds no FAT boot sector and publishes nothing.
 //
-#define RAMDISK_FALLBACK_BASE  0xF0000000
+#define RAMDISK_FALLBACK_BASE  0x01000000
 #define RAMDISK_FALLBACK_MAX   0x03800000
 
 //
@@ -473,12 +475,12 @@ PublishFallback (
   // mapped, and 0x90000000, which lies inside MPSS_REGION and must not be touched.
   //
   STATIC CONST UINT64  Candidates[] = {
-    0xA6F00000ULL,   // Initrd_Small: where the driver used to look
-    0xF0000000ULL,   // XNU_Payload: what the boot image header asks for
+    0x01000000ULL,   // the stock vendor_boot ramdisk address
+    0xA6F00000ULL,   // Initrd_Small
+    0xF0000000ULL,   // XNU_Payload
     0xB8000000ULL,   // DXE_Heap
     0xA8000000ULL,   // Kernel
     0xF8800000ULL,   // OEM_VM_REGION
-    0xFC800000ULL,   // Display_Reserved
   };
   UINT64  Size;
   UINTN   Index;
