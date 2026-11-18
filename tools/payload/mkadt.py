@@ -23,11 +23,22 @@ PANIC_LOG_SIZE = 0x100000
 # carve-out is in the low bank and the dynamic pools are limited below 4G.
 # myron's high DRAM bank, as recorded in this unit's own boot log:
 #   0x80000000  + 0x80000000   (2 GiB, low bank - full of Qualcomm carve-outs)
-#   0x880000000 + 0x380000000  (14 GiB, high bank - clean)
-# The kernel RAM lives in the high bank for the same reason the sweet port uses
-# its highmem option: every fixed XPU carve-out sits in the low bank.
-HIGH_PHYS_BASE = 0x880000000
-HIGH_MEM_SIZE = 0x380000000
+#   0x880000000 + 0x380000000  (14 GiB, high bank)
+#
+# The kernel does NOT start at the bank base. LCP_DARE_REGION occupies
+# 0x880000000 + 96 MiB there, and XNU maps every byte from phys_base upward as
+# cacheable memory, so starting at the bank base puts a Qualcomm protected range
+# inside the kernel's own range - the phone dies with no output at all. Start
+# 160 MiB above the end of that region instead:
+#
+#   LCP_DARE_REGION  0x880000000 + 0x06000000  end 0x886000000
+#   kernel RAM       0x890000000 + 0x370000000  end 0xC00000000  (13.75 GiB)
+#
+# This is the same rule ios-sweet records as "every protected range must sit below
+# the kernel"; the sweet port solves it by choosing a high base, we solve it by
+# starting above the one protected range in this bank.
+HIGH_PHYS_BASE = 0x890000000
+HIGH_MEM_SIZE = 0x370000000
 # /arm-io children are relative to this; it must not be 0 (serial_init bails)
 SOC_BASE = 0x01000000
 
