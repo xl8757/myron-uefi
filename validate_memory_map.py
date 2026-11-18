@@ -69,7 +69,12 @@ required = {
     "HYPERVISOR_EXTENDED_": (0xC3DD0000, 0x00A30000),
     "TRUST_UI_VM_REGION": (0xF3800000, 0x05000000),
     "OEM_VM_REGION": (0xF8800000, 0x03800000),
-    "UEFI_FD": (0xA7100000, 0x00300000),
+    # The firmware volume now carries the payload, so it spans the old
+    # Initrd_Small, FD_Reserved, UEFI_FD and UEFI_FD_Reserved range and stops
+    # where Info_Blk begins. See Resources/Configs/myron.toml for why: the
+    # bootloader passes no device tree, so the payload cannot arrive as a
+    # ramdisk and has to be embedded in the volume instead.
+    "UEFI_FD": (0xA6F00000, 0x00701000),
     "Kernel": (0xA8000000, 0x10000000),
     "XNU_Payload": (0xF0000000, 0x03800000),
     "DXE_Heap": (0xB8000000, 0x0BDD0000),
