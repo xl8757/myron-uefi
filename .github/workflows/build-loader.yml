@@ -1,0 +1,101 @@
+name: build-loader
+
+# Build the bare-metal loader image for the Redmi K90 Pro Max.
+#
+# This is a separate route from build.yml. That workflow builds the UniXNU UEFI
+# firmware and needs a payload it can read from either the boot image ramdisk or the
+# firmware volume; both were measured on hardware and neither works on this board.
+# Here the loader is the kernel image itself: ABL jumps into it with the MMU off, it
+# copies the XNU segments to phys_base and enters the kernel. No UEFI, no ramdisk.
+#
+# The approach follows ShueiTsuki/data-a-live, which boots native iOS on the same SoC
+# (SM8850). See docs/PAYLOAD-DELIVERY.md in the device repository for what was tried
+# before and why it did not work.
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_tag:
+        description: "release tag holding the linked kernel (must keep its chained fixups)"
+        type: string
+        default: "kernel-16.6mib"
+      cmdline:
+        description: "kernel boot-args for the payload"
+        type: string
+        default: "debug=0xc serial=3 cpus=1 keepsyms=1 -v"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm python3
+          clang --version | head -1
+          ld.lld --version | head -1
+
+      # The kernel has to keep LC_DYLD_CHAINED_FIXUPS and the bytes it points at:
+      # mkpayload.py walks those chains and rewrites every pointer to its unslid
+      # target, and the loader only copies flat segments afterwards. Stripping
+      # __LINKEDIT to make the file smaller destroys them, which is why the stripped
+      # 9.84 MiB kernel cannot be used here.
+      - name: fetch the kernel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KERNEL_TAG: ${{ inputs.kernel_tag }}
+        run: |
+          mkdir -p kernel-in
+          gh release download "$KERNEL_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'kernel*.macho' --dir kernel-in --clobber
+          ls -l kernel-in
+          found=$(find kernel-in -name 'kernel*.macho' -print -quit)
+          test -n "$found" || { echo "::error::no kernel in the release"; exit 1; }
+          cp "$found" kernel-in/kernel.macho
+          stat -c '%s %n' kernel-in/kernel.macho
+
+      - name: build the loader
+        env:
+          KERNEL: kernel-in/kernel.macho
+          OUT: out/loader
+          CMDLINE: ${{ inputs.cmdline }}
+        run: |
+          chmod +x tools/loader/build.sh
+          CC=clang LD=ld.lld OBJCOPY=llvm-objcopy READELF=llvm-readelf \
+            tools/loader/build.sh
+
+      - name: report
+        run: |
+          ls -l out/loader
+          file out/loader/Image out/loader/myron-loader-boot.img || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: myron-loader
+          path: |
+            out/loader/Image
+            out/loader/myron.adt
+            out/loader/payload.bin
+            out/loader/myron-loader-boot.img
+          if-no-files-found: error
+
+      - name: publish
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="loader-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}"
+          notes=$(printf 'cmdline=%s\nkernel_sha256=%s\nloader_sha256=%s\nsource=%s' \
+            "${{ inputs.cmdline }}" \
+            "$(sha256sum kernel-in/kernel.macho | cut -d' ' -f1)" \
+            "$(sha256sum out/loader/Image | cut -d' ' -f1)" \
+            "${GITHUB_SHA}")
+          gh release create "$tag" --title "$tag" --notes "$notes" \
+            out/loader/Image out/loader/myron-loader-boot.img
+          echo "TAG=$tag" >> "$GITHUB_ENV"
