@@ -457,7 +457,7 @@ FatVolumeSize (
   it is, so nothing else is needed.
 **/
 STATIC
-VOID
+BOOLEAN
 PublishFallback (
   VOID
   )
@@ -466,12 +466,13 @@ PublishFallback (
 
   if (!FatVolumeSize (RAMDISK_FALLBACK_BASE, &Size)) {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: nothing at 0x%lx either\n", (UINT64)RAMDISK_FALLBACK_BASE));
-    return;
+    return FALSE;
   }
 
   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: ramdisk at 0x%lx, %lu bytes from its BPB\n",
           (UINT64)RAMDISK_FALLBACK_BASE, Size));
   PublishRange (RAMDISK_FALLBACK_BASE, RAMDISK_FALLBACK_BASE + Size);
+  return TRUE;
 }
 
 EFI_STATUS
@@ -498,21 +499,28 @@ UniXNURamDiskDxeEntry (
 
   if ((Dtb != 0) && ((Dtb & 3) == 0) && (FdtCheckHeader ((VOID *)(UINTN)Dtb) == 0)) {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
-    if (PublishPayloadVolume ()) {
+    if (PublishFallback ()) {
       return EFI_SUCCESS;
     }
 
     if (PublishInitrd ((VOID *)(UINTN)Dtb)) {
       return EFI_SUCCESS;
     }
+
+    if (PublishPayloadVolume ()) {
+      return EFI_SUCCESS;
+    }
   } else {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: x0 0x%lx is not a device tree\n", Dtb));
+    if (PublishFallback ()) {
+      return EFI_SUCCESS;
+    }
+
     if (PublishPayloadVolume ()) {
       return EFI_SUCCESS;
     }
   }
 
   PublishStatus (3, MARKER_RED, L"UNIXNURAMDISK: no payload anywhere");
-  PublishFallback ();
   return EFI_SUCCESS;
 }
