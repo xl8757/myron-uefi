@@ -36,7 +36,11 @@ on:
       kernel_size_mib:
         description: "payload FAT size when a kernel is supplied, in MiB"
         type: string
-        default: "96"
+        default: "16"
+      kernel_artifact:
+        description: "artifact id of the linked RELEASE kernel; the step strips it and embeds it in the FD"
+        type: string
+        default: "14401462538"
   push:
     paths:
       - 'Platforms/**'
@@ -269,11 +273,45 @@ jobs:
       # The volume size follows the kernel rather than being fixed at 1024 KiB,
       # because the kernel is tens of MiB and a FAT volume that is too small
       # would truncate it silently.
+      # The kernel has to be inside the firmware volume: this board's bootloader
+      # passes no device tree, so UniXNURamDiskDxe has no /chosen/linux,initrd-start
+      # to read and cannot find a ramdisk at any fixed address (six were tried on
+      # hardware, all empty). Embedding it means the whole payload arrives with the
+      # FD and nothing depends on what the bootloader does or does not report.
+      #
+      # The linked image is 16.6 MiB; most of that is __LINKEDIT, which a boot loader
+      # never reads. tools/strip-macho.py drops the symbol table and the section it
+      # describes, and the result is 9.84 MiB.
+      - name: fetch and strip the kernel
+        env:
+          KERNEL_ARTIFACT: ${{ inputs.kernel_artifact || '14401462538' }}
+        run: |
+          if [ -n "${{ inputs.kernel }}" ] && [ -f "${{ inputs.kernel }}" ]; then
+            echo "kernel supplied as a file: ${{ inputs.kernel }}"
+            exit 0
+          fi
+          mkdir -p kernel-in
+          gh run download "$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${KERNEL_ARTIFACT}" --jq '.workflow_run.id')" \
+            --repo "$GITHUB_REPOSITORY" --name kernel-release-reference \
+            --dir kernel-in --pattern '*' 2>/dev/null || \
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${KERNEL_ARTIFACT}/zip" > kernel-in/art.zip
+          if [ -f kernel-in/art.zip ]; then
+            ( cd kernel-in && unzip -o -q art.zip )
+          fi
+          found=$(find kernel-in -name 'mach.release*.noctf' -print -quit)
+          test -n "$found" || { echo "::error::no kernel in the artifact"; find kernel-in -type f | head; exit 1; }
+          python3 tools/strip-macho.py "$found" kernel-in/kernel-minimal.macho
+          stat -c '%s %n' kernel-in/kernel-minimal.macho
+
       - name: payload volume
         env:
           BUILD_TYPE: ${{ inputs.build_type || 'DEBUG' }}
-          KERNEL: ${{ inputs.kernel }}
-          KERNEL_MIB: ${{ inputs.kernel_size_mib || '96' }}
+          # The stripped kernel that the previous step produced. inputs.kernel can
+          # still override it with a path when debugging a specific image.
+          KERNEL: ${{ inputs.kernel || 'kernel-in/kernel-minimal.macho' }}
+          # The payload volume only has to hold the kernel plus the FAT metadata;
+          # 16 MiB covers a 9.84 MiB kernel with room for a second entry.
+          KERNEL_MIB: ${{ inputs.kernel_size_mib || '16' }}
         run: |
           efi=$(find Mu-Silicium/Build -name HelloPayload.efi -print -quit)
           test -n "$efi" || { echo "HelloPayload.efi not found" >&2; exit 1; }
@@ -296,7 +334,7 @@ jobs:
               --size-kib "$((KERNEL_MIB * 1024))" \
               --add "EFI/UNIXNU/UNIXNU.TOM=Resources/payload/unixnu-kernel.toml" \
               --add "PAYLOADS/HELLO.EFI=$efi" \
-              --add "PAYLOADS/KERNEL.MACHO=$KERNEL"
+              --add "PAYLOADS/KERNEL.BIN=$KERNEL"
             out_bytes=$(stat -c %s "$payload")
             echo "payload volume $out_bytes bytes, kernel $kernel_bytes bytes"
             test "$out_bytes" -ge "$kernel_bytes" || {
@@ -311,6 +349,18 @@ jobs:
           source ../venv/bin/activate
           python3 build_uefi.py -d myron -r "$BUILD_TYPE"
           cd ..
+
+          # The whole point of embedding the payload is that the phone can boot the
+          # kernel with no ramdisk at all: this board's bootloader passes no device
+          # tree (x0 = 0), so there is no /chosen/linux,initrd-start to find one by.
+          # Check the volume actually made it into the volume and that the FD still
+          # fits inside the window board.toml declares.
+          fv=$(ls Mu-Silicium/Build/myronPkg/*/FV/SILICIUM_UEFI.fd)
+          fd_bytes=$(stat -c %s "$fv")
+          echo "firmware volume $fd_bytes bytes"
+          want=$((0x701000))
+          test "$fd_bytes" -le "$want" || {
+            echo "::error::firmware volume $fd_bytes exceeds the 0x701000 window"; exit 1; }
 
           # myron-boot.img still carries the FD from the first build, so swap in
           # the new one and verify the gzip(BootShim + FD) body matches.
