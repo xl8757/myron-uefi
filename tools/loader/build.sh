@@ -51,7 +51,11 @@ stat -c '%s %n' "$KERNEL"
 # that ABL fills at boot, and devicetree.py refuses a zero-size DRAM range. myron.dts
 # replaces it with this unit's first DRAM bank.
 echo "== device tree =="
-DTS=${DTS:-$repo/Resources/DTBs/myron.dts}
+# The board tree, not the vendor tree: myron.dts is the full decompiled stock DTB
+# and the ADT generator cannot read it (cpu-map and idle-states under /cpus, psci
+# under /soc, a zero /memory reg). myron-board.dts is the small tree in the shape
+# UniXNU's own boards use.
+DTS=${DTS:-$repo/Resources/DTBs/myron-board.dts}
 [ -f "$DTS" ] || { echo "no device tree source at $DTS (set DTS=)" >&2; exit 1; }
 echo "  from $DTS"
 "${DTC:-dtc}" -I dts -O dtb -o "$OUT/myron.dtb" "$DTS" 2>/dev/null
