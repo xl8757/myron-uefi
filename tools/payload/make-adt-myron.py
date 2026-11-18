@@ -29,6 +29,7 @@ sys.path.insert(0, str(HERE.parent))
 
 from unixnu import devicetree  # noqa: E402
 from unixnu.profiles import merge  # noqa: E402
+import adt  # noqa: E402
 
 
 def main() -> int:
@@ -51,29 +52,25 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(blob)
 
-    # The two properties this port has actually been bitten by. Report them rather
-    # than trusting the generator to keep doing the right thing.
-    seed = blob.count(b"random-seed")
+    # The property this port has actually been bitten by: xnu-12377 reads four 64-byte
+    # seeds on ARM and panics with fewer, while the ios-sweet tree it replaces carried
+    # one 64-byte seed. Verify it through a real parse rather than by scanning bytes -
+    # the serialised form is name[32] + size(4) + value, with the flags in the top bit
+    # of size, and a naive search reads the wrong word and reports a bogus length.
     print(f"ADT: {args.output} ({len(blob)} bytes)")
-    print(f"  random-seed present: {seed > 0}")
 
-    # Verify the seed length from the serialised tree: the property is stored as
-    # name, flags, length, value, so the length word sits right before the value.
-    import struct
-    idx = blob.find(b"random-seed\0")
-    if idx >= 0:
-        padded = blob.find(b"\0", idx) + 1
-        padded = (padded + 3) & ~3
-        length, = struct.unpack_from("<I", blob, padded + 4)
-        print(f"  random-seed length: {length} bytes"
-              f"  {'OK (xnu-12377 needs 256)' if length >= 256 else 'TOO SHORT'}")
-        if length < 256:
-            return 1
-    else:
+    node, _ = adt.parse(blob)
+    chosen = next((child for child in node.children if child.name == "chosen"), None)
+    if chosen is None:
+        print("  /chosen MISSING", file=sys.stderr)
+        return 1
+    seed = chosen.prop("random-seed")
+    if seed is None:
         print("  random-seed MISSING", file=sys.stderr)
         return 1
-
-    return 0
+    print(f"  random-seed: {len(seed)} bytes"
+          f"  {'OK (xnu-12377 needs 256)' if len(seed) >= 256 else 'TOO SHORT'}")
+    return 0 if len(seed) >= 256 else 1
 
 
 if __name__ == "__main__":
