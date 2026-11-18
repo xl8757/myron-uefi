@@ -24,13 +24,17 @@ requires_kernel_header = true
 # the FD only pays for the compressed size: an 11.00 MiB payload with a 9.84 MiB
 # kernel compresses to about 2.78 MiB.
 #
-# The window runs from the old Initrd_Small base up to Info_Blk, absorbing
-# Initrd_Small, FD_Reserved, UEFI_FD and UEFI_FD_Reserved. Everything UEFI needs at
-# runtime (Info_Blk, the page tables, the log buffer, the stack and the heaps) starts
-# at 0xA7601000 and is untouched. 7 MiB against a 4.78 MiB requirement leaves about
-# 2.2 MiB of headroom for the firmware's own module growth.
-base = 0xA6F00000
-size = 0x701000
+# The volume keeps its original base and only grows upward to Info_Blk. The base
+# matters: 0xA6F00000 is the Initrd_Small window, and moving the FD there put the
+# copied firmware exactly where the bootloader had placed the boot image's ramdisk.
+# The phone black-screened and fell back to Android. Growing up from 0xA7100000
+# leaves Initrd_Small and FD_Reserved alone.
+#
+# The volume actually fills about 3.59 MiB; 5 MiB leaves room for the firmware's own
+# module growth without touching anything past 0xA7601000, where Info_Blk, the page
+# tables, the log buffer, the stack and the heaps begin.
+base = 0xA7100000
+size = 0x501000
 
 #
 # Android Boot Image Kernel Configs
