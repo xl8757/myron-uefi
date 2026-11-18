@@ -14,8 +14,23 @@ requires_kernel_header = true
 # UEFI FD Configs
 #
 [uefi_fd]
-base = 0xA7100000
-size = 0x300000
+# The payload is embedded in the firmware volume, so the FD has to be big enough to
+# hold it. It cannot come from the boot image ramdisk: the bootloader on this board
+# passes no device tree (x0 = 0 at handoff), so there is no
+# /chosen/linux,initrd-start for UniXNURamDiskDxe to read, and every fixed address
+# it tried came up empty.
+#
+# FvMain - which carries the payload - is LZMA-compressed inside FVMAIN_COMPACT, so
+# the FD only pays for the compressed size: an 11.00 MiB payload with a 9.84 MiB
+# kernel compresses to about 2.78 MiB.
+#
+# The window runs from the old Initrd_Small base up to Info_Blk, absorbing
+# Initrd_Small, FD_Reserved, UEFI_FD and UEFI_FD_Reserved. Everything UEFI needs at
+# runtime (Info_Blk, the page tables, the log buffer, the stack and the heaps) starts
+# at 0xA7601000 and is untouched. 7 MiB against a 4.78 MiB requirement leaves about
+# 2.2 MiB of headroom for the firmware's own module growth.
+base = 0xA6F00000
+size = 0x701000
 
 #
 # Android Boot Image Kernel Configs
