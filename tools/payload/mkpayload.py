@@ -140,10 +140,15 @@ def adt_dram(adt_blob):
             struct.unpack('<Q', chosen.prop('dram-size'))[0])
 
 
-def build(kernel_path, adt_path, cmdline, ramdisk_path=None):
+def build(kernel_path, adt_path, cmdline, ramdisk_path=None, skip_fixups=False):
     buf = bytearray(open(kernel_path, 'rb').read())
     m = parse_macho(buf)
-    nfix = apply_chained_fixups(buf, m)
+    # XNU 12377 rebases and signs its own chained fixups after entry (see UniXNU
+    # DarwinBoot: "XNU rebases and signs its own fixup chains after entry; firmware
+    # only copies root mappings"). The ios-sweet helper predates that and rewrites
+    # every pointer to a plain VA, which a kernel that expects to do the rebasing
+    # itself cannot use. --no-fixups keeps the segment bytes exactly as linked.
+    nfix = 0 if skip_fixups else apply_chained_fixups(buf, m)
     segs = [s for s in m['segs'] if s['vmsize']]
     text = m['segs'][0]
     assert text['name'] == '__TEXT' and text['fileoff'] == 0
@@ -198,8 +203,10 @@ if __name__ == '__main__':
     ap.add_argument('kernel'); ap.add_argument('adt'); ap.add_argument('out')
     ap.add_argument('--cmdline', default='debug=0xc serial=3 cpus=1 keepsyms=1')
     ap.add_argument('--ramdisk', help='root image for md0 (boot with rd=md0)')
+    ap.add_argument('--no-fixups', action='store_true',
+                    help='keep the chained fixups for XNU to apply itself')
     a = ap.parse_args()
-    blob, info = build(a.kernel, a.adt, a.cmdline, a.ramdisk)
+    blob, info = build(a.kernel, a.adt, a.cmdline, a.ramdisk, a.no_fixups)
     open(a.out, 'wb').write(blob)
     for k, v in info.items():
         if k != 'segs':
