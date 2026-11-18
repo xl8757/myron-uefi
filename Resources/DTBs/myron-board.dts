@@ -97,13 +97,25 @@
         method = "smc";
     };
 
-    // The first DRAM bank, from this unit's own boot log. The board has a second,
-    // non-contiguous bank (0x880000000, 14 GiB) that the kernel RAM lives in, but
-    // devicetree.py requires exactly one contiguous /memory range and board.toml
-    // pins payload.dram_size to this one.
-    memory@80000000 {
+    // The kernel RAM window, and this is NOT the board's first DRAM bank.
+    //
+    // devicetree.py takes /chosen/dram-base and dram-size straight from this node,
+    // and the loader puts the kernel at dram-base. XNU then maps every byte from
+    // there upward as cacheable memory, so one Qualcomm protected range inside the
+    // span kills it before it can print. The low bank (0x80000000, 2 GiB) is full of
+    // them - MPSS 235 MiB, ADSP 85 MiB, DSM 95 MiB and more - which is why the kernel
+    // does not go there.
+    //
+    // The high bank at 0x880000000 has exactly one protected range, LCP_DARE_REGION
+    // (0x880000000 + 96 MiB), so the window starts 160 MiB past its end: 13.75 GiB of
+    // clean RAM. ios-sweet records the same rule as "every protected range must sit
+    // below the kernel".
+    //
+    // board.toml's payload.dram_size has to match this size; devicetree.py refuses a
+    // mismatch.
+    memory@890000000 {
         device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x80000000>;
+        reg = <0x8 0x90000000 0x3 0x70000000>;
     };
 
     reserved-memory {
