@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import struct
 import sys
+import tomllib
 import zlib
 from pathlib import Path
 
@@ -25,8 +26,14 @@ MSR_DAIFSET_F = struct.pack("<I", 0xD5034FDF)   # msr daifset, #0xf
 IC_IALLU = struct.pack("<I", 0xD508751F)        # ic iallu
 DSB_SY = struct.pack("<I", 0xD5033F9F)          # dsb sy
 
-FD_BASE = 0xA7100000
-FD_SIZE = 0x300000
+# The firmware volume's address and size come from the device config, not from a
+# constant here: the payload now ships inside the volume, so the window moves
+# whenever a larger kernel needs more room. Hardcoding them meant this check kept
+# asserting yesterday's layout after a successful build.
+_CONFIG = Path(__file__).resolve().parent.parent / "Resources/Configs/myron.toml"
+_fd = tomllib.loads(_CONFIG.read_text(encoding="utf-8"))["uefi_fd"]
+FD_BASE = _fd["base"]
+FD_SIZE = _fd["size"]
 PAGE = 4096
 
 
