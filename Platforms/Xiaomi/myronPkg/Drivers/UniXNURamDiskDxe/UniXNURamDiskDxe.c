@@ -536,7 +536,12 @@ UniXNURamDiskDxeEntry (
 
   if ((Dtb != 0) && ((Dtb & 3) == 0) && (FdtCheckHeader ((VOID *)(UINTN)Dtb) == 0)) {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
-    if (PublishFallback ()) {
+    //
+    // The firmware volume first. It carries the payload with the firmware, so this
+    // works no matter what the bootloader does or does not report, and it is the
+    // only path that has ever delivered a kernel on this board.
+    //
+    if (PublishPayloadVolume ()) {
       return EFI_SUCCESS;
     }
 
@@ -544,16 +549,17 @@ UniXNURamDiskDxeEntry (
       return EFI_SUCCESS;
     }
 
-    if (PublishPayloadVolume ()) {
+    // Diagnostic only now: every fixed address probed on hardware came up empty.
+    if (PublishFallback ()) {
       return EFI_SUCCESS;
     }
   } else {
     DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: x0 0x%lx is not a device tree\n", Dtb));
-    if (PublishFallback ()) {
+    if (PublishPayloadVolume ()) {
       return EFI_SUCCESS;
     }
 
-    if (PublishPayloadVolume ()) {
+    if (PublishFallback ()) {
       return EFI_SUCCESS;
     }
   }
