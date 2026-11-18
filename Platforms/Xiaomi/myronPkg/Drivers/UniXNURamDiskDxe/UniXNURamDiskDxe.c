@@ -466,13 +466,19 @@ PublishFallback (
   // Probe the candidates in order and report every hit, so one boot says whether
   // the bootloader loaded a payload at all and where it put it.
   //
+  //
+  // Every entry here must be inside a region MemoryMapLib declares, or the read
+  // itself faults and the platform resets before anything reaches the log. An
+  // earlier version of this list carried 0xD0000000 and 0xE0000000, which are not
+  // mapped, and 0x90000000, which lies inside MPSS_REGION and must not be touched.
+  //
   STATIC CONST UINT64  Candidates[] = {
-    0xA6F00000ULL,
-    0xF0000000ULL,
-    0xC0000000ULL,
-    0xD0000000ULL,
-    0xE0000000ULL,
-    0x90000000ULL,
+    0xA6F00000ULL,   // Initrd_Small: where the driver used to look
+    0xF0000000ULL,   // XNU_Payload: what the boot image header asks for
+    0xB8000000ULL,   // DXE_Heap
+    0xA8000000ULL,   // Kernel
+    0xF8800000ULL,   // OEM_VM_REGION
+    0xFC800000ULL,   // Display_Reserved
   };
   UINT64  Size;
   UINTN   Index;
