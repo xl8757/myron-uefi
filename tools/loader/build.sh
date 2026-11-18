@@ -58,7 +58,7 @@ echo "  from $DTS"
 stat -c '%s %n' "$OUT/myron.dtb"
 
 echo "== ADT =="
-BOARD=${BOARD:-$repo/Resources/Configs/myron.toml}
+BOARD=${BOARD:-$repo/Resources/Configs/board.toml}
 # The OS profile lives in the device repository, not here. Without it the generator
 # cannot build /chosen; fall back to the ios-sweet tree so the build still produces
 # an image, with a loud warning.
