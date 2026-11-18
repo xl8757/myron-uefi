@@ -346,7 +346,7 @@ title = "myron iOS 26.5.2 bring-up"
 # configuration for this board does ("first DRAM bank; XNU only reports it").
 # dts/myron.dts /memory must carry exactly this range: devicetree.py refuses a
 # mismatch, and the static DTB's placeholder reg is replaced for that reason.
-dram_size = "0x80000000"
+dram_size = "0x370000000"
 # Disabled for the first bring-up build: patch-xnu-entry-probe.py --panic-screen
 # needs Mu-Silicium Silicon/Silicium/SiliciumPkg/Library/FrameBufferSerialPortLib/Font.h,
 # and no public checkout of that tree is reachable (2026-11-15). With this false the
