@@ -237,6 +237,13 @@ def repack(boot: Path, ramdisk: Path, out: Path) -> None:
           % (len(kernel), len(ramdisk_blob), len(second), len(blob)))
 
 
+def _configured_fd_size() -> int:
+    """The firmware volume size from the device config."""
+    import tomllib
+    cfg = Path(__file__).resolve().parent.parent / "Resources/Configs/myron.toml"
+    return tomllib.loads(cfg.read_text(encoding="utf-8"))["uefi_fd"]["size"]
+
+
 def repack_fd(boot: Path, fd: Path, out: Path) -> None:
     """Swap the FD inside gzip(BootShim + FD) and keep the appended DTB."""
     data = boot.read_bytes()
@@ -254,8 +261,14 @@ def repack_fd(boot: Path, fd: Path, out: Path) -> None:
     fd_off = sig - 40
 
     new_fd = fd.read_bytes()
-    if len(new_fd) != 0x300000:
-        raise SystemExit("FD 必须是 0x300000 字节，实得 %d" % len(new_fd))
+    #
+    # The volume size lives in the device config, not here: it has to match what
+    # the shim was built with, otherwise the shim's copy loop runs off the end of
+    # the payload. Hardcoding 0x300000 broke once the payload moved inside the FD.
+    #
+    want = _configured_fd_size()
+    if len(new_fd) != want:
+        raise SystemExit("FD %d 字节，myron.toml 声明 %d" % (len(new_fd), want))
     new_kernel = gzip.compress(body[:fd_off] + new_fd, compresslevel=6, mtime=0) + trailing
 
     rd_off = page + ((ks + page - 1) // page) * page
