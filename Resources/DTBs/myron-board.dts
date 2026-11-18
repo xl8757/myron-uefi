@@ -1,0 +1,166 @@
+// SPDX-License-Identifier: BSD-3-Clause
+//
+// Redmi K90 Pro Max (myron, SM8850 / Canoe) device tree for the bare-metal loader.
+//
+// This is NOT dts/myron.dts. That one is the full vendor tree decompiled from the
+// stock DTB - 4106 nodes, 1.1 MB - and UniXNU's ADT generator cannot read it: the
+// vendor tree keeps cpu-map and idle-states under /cpus, puts psci under /soc, and
+// carries a zero /memory reg that ABL fills at boot. Each of those stopped the
+// generator in turn.
+//
+// What the generator actually needs is small, and it is the shape UniXNU's own board
+// trees use (see UniXNU-sm8550-common/dts/sm8550.dtsi): /cpus, /psci, /memory, and an
+// /soc whose children the ADT names with unixnu,adt-name. Everything here is measured
+// from this unit, and where a value came from the vendor tree the source is noted.
+//
+// dts/myron.dts stays in the repository as the byte-exact stock reference.
+
+/dts-v1/;
+
+/ {
+    model = "Xiaomi Redmi K90 Pro Max";
+    compatible = "xiaomi,myron", "qcom,canoe";
+    #address-cells = <2>;
+    #size-cells = <2>;
+    interrupt-parent = <&gic>;
+
+    // ---------------------------------------------------------------------
+    // CPUs
+    //
+    // Eight cores in two clusters: six at 0x0-0x500 and two at 0x10000/0x10100.
+    // The affinity values are the node names of the vendor tree, and XNU wants
+    // them in reg as a u32.
+    //
+    // compatible is "arm,armv8" as the vendor tree has it. UniXNU's sm8550 tree
+    // names the actual cores instead, which the ADT does not read, and guessing
+    // them here would be worse than copying what the phone reports.
+    // ---------------------------------------------------------------------
+    cpus {
+        #address-cells = <2>;
+        #size-cells = <0>;
+        // 19.2 MHz, the same value the vendor tree carries on /cpus.
+        timebase-frequency = <0x124f800>;
+
+        cpu0: cpu@0 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x0>;
+            enable-method = "psci";
+        };
+        cpu1: cpu@100 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x100>;
+            enable-method = "psci";
+        };
+        cpu2: cpu@200 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x200>;
+            enable-method = "psci";
+        };
+        cpu3: cpu@300 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x300>;
+            enable-method = "psci";
+        };
+        cpu4: cpu@400 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x400>;
+            enable-method = "psci";
+        };
+        cpu5: cpu@500 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x500>;
+            enable-method = "psci";
+        };
+        cpu6: cpu@10000 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x10000>;
+            enable-method = "psci";
+        };
+        cpu7: cpu@10100 {
+            device_type = "cpu";
+            compatible = "arm,armv8";
+            reg = <0x0 0x10100>;
+            enable-method = "psci";
+        };
+    };
+
+    // The vendor tree has this under /soc; the ADT generator reads it at the root.
+    psci {
+        compatible = "arm,psci-1.0";
+        method = "smc";
+    };
+
+    // The first DRAM bank, from this unit's own boot log. The board has a second,
+    // non-contiguous bank (0x880000000, 14 GiB) that the kernel RAM lives in, but
+    // devicetree.py requires exactly one contiguous /memory range and board.toml
+    // pins payload.dram_size to this one.
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x80000000>;
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        // Display_Reserved in the firmware memory map, and the region the loader
+        // paints into. Handed to XNU as boot_args.Video, not as kernel memory.
+        splash_region: framebuffer@fc800000 {
+            label = "cont_splash_region";
+            reg = <0x0 0xfc800000 0x0 0x2b00000>;
+            no-map;
+        };
+    };
+
+    soc {
+        compatible = "simple-bus";
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        // GICv3: distributor at 0x17000000, redistributors at 0x17080000 with a
+        // 0x40000 stride. All three values are from the vendor tree and from
+        // dts/myron-handoff.dts, which already had them right.
+        gic: interrupt-controller@17000000 {
+            compatible = "arm,gic-v3";
+            unixnu,adt-name = "intc";
+            reg = <0x0 0x17000000 0x0 0x10000>,
+                  <0x0 0x17080000 0x0 0x200000>;
+            #interrupt-cells = <3>;
+            #address-cells = <0>;
+            interrupt-controller;
+            redistributor-stride = <0x0 0x40000>;
+        };
+
+        // Internal UFS host. The ADT names it "ufshc"; the driver takes its windows
+        // from its own constants, so only the class matters here.
+        ufs: ufshc@1d84000 {
+            compatible = "qcom,sm8850-ufshc", "qcom,sm8550-ufshc";
+            unixnu,adt-name = "ufshc";
+            reg = <0x0 0x1d84000 0x0 0x3000>;
+            status = "disabled";
+        };
+    };
+};
+
+// The scheduler runs the six 0x0-0x500 cores as the E cluster and the two 0x10000
+// cores as P. This mirrors what the vendor tree's capacity values imply and what
+// the myron-handoff tree already set.
+&cpu0 { unixnu,cluster-type = "E"; };
+&cpu1 { unixnu,cluster-type = "E"; };
+&cpu2 { unixnu,cluster-type = "E"; };
+&cpu3 { unixnu,cluster-type = "E"; };
+&cpu4 { unixnu,cluster-type = "E"; };
+&cpu5 { unixnu,cluster-type = "E"; };
+&cpu6 { unixnu,cluster-type = "P"; };
+&cpu7 { unixnu,cluster-type = "P"; };
+
+&ufs { status = "okay"; };
